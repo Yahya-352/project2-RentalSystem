@@ -1,8 +1,9 @@
 package com.ga.RentalSystem.controller;
 
 import com.ga.RentalSystem.dto.request.LoginRequest;
-import com.ga.RentalSystem.dto.response.LoginResponse;
+import com.ga.RentalSystem.dto.request.RegisterRequest;
 import com.ga.RentalSystem.model.User;
+import com.ga.RentalSystem.repository.UserRepository;
 import com.ga.RentalSystem.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,15 +15,26 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final UserRepository userRepository;
 
     @PostMapping("/register")
-    public User Register(@RequestBody User user){
-        return userService.createUser(user);
+    public User Register(@RequestBody RegisterRequest registerRequest){
+        return userService.createUser(registerRequest);
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest){
         return userService.loginUser(loginRequest);
+    }
+
+    @GetMapping("/verify")
+    public String verify(@RequestParam String token){
+        User user = userRepository.findByVerificationToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid token"));
+        user.setVerified(true);
+        user.setVerificationToken(null);
+        userRepository.save(user);
+        return "Account verified!";
     }
 
     @GetMapping("/{id}")

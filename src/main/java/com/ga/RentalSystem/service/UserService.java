@@ -2,14 +2,16 @@ package com.ga.RentalSystem.service;
 
 
 import com.ga.RentalSystem.dto.request.LoginRequest;
+import com.ga.RentalSystem.dto.request.RegisterRequest;
 import com.ga.RentalSystem.dto.response.LoginResponse;
+
 import com.ga.RentalSystem.enums.Role;
 import com.ga.RentalSystem.enums.UserStatus;
 import com.ga.RentalSystem.model.User;
 import com.ga.RentalSystem.repository.UserRepository;
 import com.ga.RentalSystem.security.JWTUtils;
 import com.ga.RentalSystem.security.MyUserDetails;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.ResponseEntity;
@@ -22,12 +24,14 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+import java.util.UUID;
+
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     private final PasswordEncoder passwordEncoder;
     private final JWTUtils jwtUtils;
@@ -35,20 +39,32 @@ public class UserService {
 
     @Autowired
     public UserService(UserRepository userRepository,
+                       EmailService emailService,
                        @Lazy PasswordEncoder passwordEncoder,
                        JWTUtils jwtUtils,
                        @Lazy AuthenticationManager authenticationManager) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
+        this.emailService = emailService;
         this.authenticationManager = authenticationManager;
     }
 
-
-    public User createUser(User user){
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+    public User createUser(RegisterRequest request){
+        User user = new User();
+        user.setUserName(request.userName());
+        user.setEmail(request.email());
+        user.setPassword(passwordEncoder.encode(request.password()));
         user.setRoleEnum(Role.CUSTOMER);
         user.setUserStatus(UserStatus.UNVERIFIED);
+        user.setVerified(false);
+
+        String token = UUID.randomUUID().toString();
+        user.setVerificationToken(token);
+
+        String link = "http://localhost:8080/users/verify?token=" + token;
+        emailService.sendEmail(user.getEmail(), "Verify your account", "Click to verify: " + link);
+
         return userRepository.save(user);
     }
 
@@ -63,6 +79,11 @@ public class UserService {
 
             MyUserDetails myUserDetails = (MyUserDetails) authentication.getPrincipal();
             final String jwt = jwtUtils.generateJwtToken(myUserDetails);
+
+            if (!myUserDetails.getUser().isVerified()) {
+                return ResponseEntity.status(403)
+                        .body("Please verify your email before logging in");
+            }
 
             return ResponseEntity.ok(new LoginResponse(jwt ,
                     myUserDetails.getUsername(),

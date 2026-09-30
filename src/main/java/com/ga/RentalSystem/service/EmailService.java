@@ -16,6 +16,7 @@ public class EmailService {
                           String body){
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);
+        message.setFrom("noreply@rentalsystem.com");
         message.setSubject(subject);
         message.setText(body);
         javaMailSender.send(message);

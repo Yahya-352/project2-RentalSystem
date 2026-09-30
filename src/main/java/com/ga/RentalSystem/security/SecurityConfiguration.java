@@ -38,6 +38,7 @@ public class SecurityConfiguration {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests
                         (auth -> auth.requestMatchers(
+                                "/users/verify",
                                 "/users/login",
                                 "/users/register"
                         ).permitAll().anyRequest().authenticated());
