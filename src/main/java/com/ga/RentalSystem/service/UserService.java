@@ -50,6 +50,15 @@ public class UserService {
         this.authenticationManager = authenticationManager;
     }
 
+    public String verify(String token){
+        User user = userRepository.findByVerificationToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid token"));
+        user.setVerified(true);
+        user.setVerificationToken(null);
+        userRepository.save(user);
+        return "Account verified!";
+    }
+
     public User createUser(RegisterRequest request){
         User user = new User();
         user.setUserName(request.userName());

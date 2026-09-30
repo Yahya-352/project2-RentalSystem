@@ -31,7 +31,10 @@ public class User {
     @Column(nullable = false)
     private UserStatus userStatus;
 
+    @Column
     private String verificationToken;
+
+    @Column
     private boolean verified = false;
 
 
