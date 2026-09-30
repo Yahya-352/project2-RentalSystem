@@ -24,6 +24,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 
@@ -53,6 +54,10 @@ public class UserService {
     public String verify(String token){
         User user = userRepository.findByVerificationToken(token)
                 .orElseThrow(() -> new RuntimeException("Invalid token"));
+
+        if(user.getVerificationTokenExpiryDate().isBefore(LocalDateTime.now())){
+            return "Verification link expired";
+        }
         user.setVerified(true);
         user.setVerificationToken(null);
         userRepository.save(user);
@@ -65,16 +70,37 @@ public class UserService {
         user.setEmail(request.email());
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setRoleEnum(Role.CUSTOMER);
-        user.setUserStatus(UserStatus.UNVERIFIED);
+        user.setUserStatus(UserStatus.ACTIVE);
         user.setVerified(false);
 
         String token = UUID.randomUUID().toString();
         user.setVerificationToken(token);
+        user.setVerificationTokenExpiryDate(LocalDateTime.now().plusHours(1));
 
         String link = "http://localhost:8080/users/verify?token=" + token;
-        emailService.sendEmail(user.getEmail(), "Verify your account", "Click to verify: " + link);
+        emailService.sendEmail(user.getEmail(), "Verify your account",
+                "Click to verify: " + link);
 
         return userRepository.save(user);
+    }
+
+    public String resendVerification(String email){
+        User user = userRepository.findByEmail(email).
+                orElseThrow(() -> new RuntimeException("No User Found with that email"));
+
+        if(user.isVerified()){
+            return "Account is Already Verified";
+        }
+        String token = UUID.randomUUID().toString();
+        user.setVerificationToken(token);
+        user.setVerificationTokenExpiryDate(LocalDateTime.now().plusHours(1));
+        userRepository.save(user);
+
+        String link = "http://localhost:8080/users/verify?token=" + token;
+        emailService.sendEmail(user.getEmail(), "Verify your account",
+                "Click to verify: " + link);
+
+        return "Email Sent Successfully";
     }
 
     public ResponseEntity<?> loginUser(LoginRequest loginRequest){

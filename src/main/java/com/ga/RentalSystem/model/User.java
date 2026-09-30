@@ -5,6 +5,8 @@ import com.ga.RentalSystem.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 @Entity
 @Table(name = "users")
@@ -33,6 +35,9 @@ public class User {
 
     @Column
     private String verificationToken;
+
+    @Column
+    private LocalDateTime verificationTokenExpiryDate;
 
     @Column
     private boolean verified = false;

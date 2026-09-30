@@ -31,6 +31,11 @@ public class UserController {
         return userService.verify(token);
     }
 
+    @GetMapping("/verify-resend")
+    public String verifyReSend(@RequestBody String email){
+        return userService.verify(email);
+    }
+
     @GetMapping("/{id}")
     public User get(@PathVariable Long id) {
         return userService.getUserById(id);
