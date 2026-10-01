@@ -3,6 +3,7 @@ package com.ga.RentalSystem.service;
 
 import com.ga.RentalSystem.dto.request.LoginRequest;
 import com.ga.RentalSystem.dto.request.RegisterRequest;
+import com.ga.RentalSystem.dto.request.ResetPasswordToken;
 import com.ga.RentalSystem.dto.response.LoginResponse;
 
 import com.ga.RentalSystem.enums.Role;
@@ -125,9 +126,9 @@ public class UserService {
         return "Email Sent Successfully";
     }
 
-    public String resetPassword(String password , String token){
+    public String resetPassword(ResetPasswordToken resetPasswordToken){
         //check if token is real
-        User user = userRepository.findByPasswordRecoveryToken(token)
+        User user = userRepository.findByPasswordRecoveryToken(resetPasswordToken.token())
                 .orElseThrow(() -> new RuntimeException("Invalid token"));
 
         //check if user token is not expired and is verified
@@ -138,7 +139,7 @@ public class UserService {
             return "user has to be verified";
         }
         //set password and reset token values
-        user.setPassword(passwordEncoder.encode(password));
+        user.setPassword(passwordEncoder.encode(resetPasswordToken.password()));
         user.setPasswordRecoveryToken(null);
         user.setPasswordRecoveryTokenExpiryDate(null);
         userRepository.save(user);

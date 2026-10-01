@@ -2,6 +2,7 @@ package com.ga.RentalSystem.controller;
 
 import com.ga.RentalSystem.dto.request.LoginRequest;
 import com.ga.RentalSystem.dto.request.RegisterRequest;
+import com.ga.RentalSystem.dto.request.ResetPasswordToken;
 import com.ga.RentalSystem.model.User;
 
 import com.ga.RentalSystem.service.UserService;
@@ -31,19 +32,20 @@ public class UserController {
         return userService.verify(token);
     }
 
-    @GetMapping("/verify-resend")
-    public String verifyReSend(@RequestBody String email){
+    @PostMapping("/resend-verification")
+    public String verifyReSend(@RequestParam String email){
+        System.out.println(email);
         return userService.resendVerification(email);
     }
 
     @PostMapping("/forgot-password")
-    public String passwordVerification(@RequestBody String email){
+    public String passwordVerification(@RequestParam String email){
         return userService.passwordVerification(email);
     }
 
     @PostMapping("/reset-password")
-    public String resetPassword(@RequestParam String token ,@RequestBody String password){
-        return userService.resetPassword(password , token);
+    public String resetPassword(@RequestBody ResetPasswordToken resetPasswordToken){
+        return userService.resetPassword(resetPasswordToken);
     }
 
     @GetMapping("/{id}")
