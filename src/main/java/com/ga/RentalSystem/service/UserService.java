@@ -103,6 +103,49 @@ public class UserService {
         return "Email Sent Successfully";
     }
 
+    public String passwordVerification(String email){
+        //check if user exists
+        User user = userRepository.findByEmail(email).
+                orElseThrow(() -> new RuntimeException("No User Found with that email"));
+
+        //set token and its expiry date
+        String passwordRecoveryToken = UUID.randomUUID().toString();
+        LocalDateTime passwordRecoveryTokenExpiryDate = LocalDateTime.now().plusHours(1);
+
+        //set values in DB
+        user.setPasswordRecoveryToken(passwordRecoveryToken);
+        user.setPasswordRecoveryTokenExpiryDate(passwordRecoveryTokenExpiryDate);
+        userRepository.save(user);
+
+        //send the email
+        String link = "http://localhost:8080/users/reset-password?token=" + passwordRecoveryToken;
+        emailService.sendEmail(user.getEmail(), "Recover your password",
+                "Click to reset your password: " + link);
+
+        return "Email Sent Successfully";
+    }
+
+    public String resetPassword(String password , String token){
+        //check if token is real
+        User user = userRepository.findByPasswordRecoveryToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid token"));
+
+        //check if user token is not expired and is verified
+        if(user.getPasswordRecoveryTokenExpiryDate().isBefore(LocalDateTime.now())){
+            return "Validation Token Expired";
+        }
+        if(!user.isVerified()){
+            return "user has to be verified";
+        }
+        //set password and reset token values
+        user.setPassword(passwordEncoder.encode(password));
+        user.setPasswordRecoveryToken(null);
+        user.setPasswordRecoveryTokenExpiryDate(null);
+        userRepository.save(user);
+
+        return "Password Updated";
+    }
+
     public ResponseEntity<?> loginUser(LoginRequest loginRequest){
         try{
             Authentication authentication = authenticationManager.authenticate(

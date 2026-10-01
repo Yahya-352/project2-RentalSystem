@@ -42,5 +42,11 @@ public class User {
     @Column
     private boolean verified = false;
 
+    @Column
+    private String passwordRecoveryToken;
+
+    @Column
+    private LocalDateTime passwordRecoveryTokenExpiryDate;
+
 
 }

@@ -40,7 +40,10 @@ public class SecurityConfiguration {
                         (auth -> auth.requestMatchers(
                                 "/users/verify",
                                 "/users/login",
-                                "/users/register"
+                                "/users/register",
+                                "/users/resend-verification",
+                                "/users/forgot-password",
+                                "/users/reset-password"
                         ).permitAll().anyRequest().authenticated());
         http.addFilterBefore(authenticationJwtTokenFilter() ,
                 UsernamePasswordAuthenticationFilter.class);
