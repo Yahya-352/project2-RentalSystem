@@ -33,7 +33,17 @@ public class UserController {
 
     @GetMapping("/verify-resend")
     public String verifyReSend(@RequestBody String email){
-        return userService.verify(email);
+        return userService.resendVerification(email);
+    }
+
+    @PostMapping("/forgot-password")
+    public String passwordVerification(@RequestBody String email){
+        return userService.passwordVerification(email);
+    }
+
+    @PostMapping("/reset-password")
+    public String resetPassword(@RequestParam String token ,@RequestBody String password){
+        return userService.resetPassword(password , token);
     }
 
     @GetMapping("/{id}")
