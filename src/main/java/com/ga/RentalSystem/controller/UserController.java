@@ -1,5 +1,6 @@
 package com.ga.RentalSystem.controller;
 
+import com.ga.RentalSystem.dto.request.ChangePasswordRequest;
 import com.ga.RentalSystem.dto.request.LoginRequest;
 import com.ga.RentalSystem.dto.request.RegisterRequest;
 import com.ga.RentalSystem.dto.request.ResetPasswordToken;
@@ -45,6 +46,12 @@ public class UserController {
     @PostMapping("/reset-password")
     public String resetPassword(@RequestBody ResetPasswordToken resetPasswordToken){
         return userService.resetPassword(resetPasswordToken);
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<String> changePassword(@RequestBody ChangePasswordRequest
+                                                             changePasswordRequest){
+        return userService.changePassword(changePasswordRequest);
     }
 
     @GetMapping("/{id}")
