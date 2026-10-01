@@ -9,6 +9,9 @@ import com.ga.RentalSystem.dto.response.LoginResponse;
 
 import com.ga.RentalSystem.enums.Role;
 import com.ga.RentalSystem.enums.UserStatus;
+import com.ga.RentalSystem.exceptions.BadRequestException;
+import com.ga.RentalSystem.exceptions.ConflictException;
+import com.ga.RentalSystem.exceptions.InformationNotFoundException;
 import com.ga.RentalSystem.model.User;
 import com.ga.RentalSystem.repository.UserRepository;
 import com.ga.RentalSystem.security.JWTUtils;
@@ -17,6 +20,7 @@ import com.ga.RentalSystem.security.MyUserDetails;
 import com.ga.RentalSystem.security.SecurityConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -54,7 +58,10 @@ public class UserService {
         this.authenticationManager = authenticationManager;
     }
 
-    public User createUser(RegisterRequest request){
+    public ResponseEntity<User> createUser(RegisterRequest request){
+        if(userRepository.findByEmail(request.email()).isPresent()){
+            throw new ConflictException("Email Already Registered");
+        }
         User user = new User();
         user.setUserName(request.userName());
         user.setEmail(request.email());
@@ -70,29 +77,30 @@ public class UserService {
         String link = "http://localhost:8080/users/verify?token=" + token;
         emailService.sendEmail(user.getEmail(), "Verify your account",
                 "Click to verify: " + link);
-
-        return userRepository.save(user);
+        User createdUser = userRepository.save(user);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
 
-    public String verify(String token){
+    public ResponseEntity<String> verify(String token){
         User user = userRepository.findByVerificationToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid token"));
+                .orElseThrow(() -> new InformationNotFoundException("Invalid token"));
 
         if(user.getVerificationTokenExpiryDate().isBefore(LocalDateTime.now())){
-            return "Verification link expired";
+            throw new BadRequestException("Verification Link Expired");
         }
+
         user.setVerified(true);
         user.setVerificationToken(null);
         userRepository.save(user);
-        return "Account verified!";
+        return ResponseEntity.ok().body("Account verified!");
     }
 
-    public String resendVerification(String email){
+    public ResponseEntity<String> resendVerification(String email){
         User user = userRepository.findByEmail(email).
-                orElseThrow(() -> new RuntimeException("No User Found with that email"));
+                orElseThrow(() -> new InformationNotFoundException("No User Found with that email"));
 
         if(user.isVerified()){
-            return "Account is Already Verified";
+            throw new ConflictException("Account Is Already Verified");
         }
         String token = UUID.randomUUID().toString();
         user.setVerificationToken(token);
@@ -103,13 +111,14 @@ public class UserService {
         emailService.sendEmail(user.getEmail(), "Verify your account",
                 "Click to verify: " + link);
 
-        return "Email Sent Successfully";
+        return ResponseEntity.ok().body("Email Sent Successfully");
     }
 
-    public String passwordVerification(String email){
+    public ResponseEntity<String> passwordVerification(String email){
         //check if user exists
         User user = userRepository.findByEmail(email).
-                orElseThrow(() -> new RuntimeException("No User Found with that email"));
+                orElseThrow(() -> new InformationNotFoundException
+                        ("No User Found with that email"));
 
         //set token and its expiry date
         String passwordRecoveryToken = UUID.randomUUID().toString();
@@ -125,17 +134,17 @@ public class UserService {
         emailService.sendEmail(user.getEmail(), "Recover your password",
                 "Click to reset your password: " + link);
 
-        return "Email Sent Successfully";
+        return ResponseEntity.ok().body("Email Sent Successfully");
     }
 
-    public String resetPassword(ResetPasswordToken resetPasswordToken){
+    public ResponseEntity<String> resetPassword(ResetPasswordToken resetPasswordToken){
         //check if token is real
         User user = userRepository.findByPasswordRecoveryToken(resetPasswordToken.token())
                 .orElseThrow(() -> new RuntimeException("Invalid token"));
 
         //check if user token is not expired and is verified
         if(user.getPasswordRecoveryTokenExpiryDate().isBefore(LocalDateTime.now())){
-            return "Validation Token Expired";
+            return ResponseEntity.ok().body("Validation Token Expired");
         }
         if(!user.isVerified()){
             return "user has to be verified";

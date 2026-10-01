@@ -36,7 +36,7 @@ public class GlobalExceptionHandler {
         String errorCode = status.name();
 
         ErrorResponse errorResponse = new ErrorResponse(
-                LocalDateTime.now().now(),
+                LocalDateTime.now(),
                 status.value(),
                 errorCode,
                 message,

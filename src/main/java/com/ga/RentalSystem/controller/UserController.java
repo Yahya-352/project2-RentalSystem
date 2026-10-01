@@ -19,7 +19,7 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping("/register")
-    public User Register(@RequestBody RegisterRequest registerRequest){
+    public ResponseEntity<User> Register(@RequestBody RegisterRequest registerRequest){
         return userService.createUser(registerRequest);
     }
 
@@ -29,17 +29,17 @@ public class UserController {
     }
 
     @GetMapping("/verify")
-    public String verify(@RequestParam String token){
+    public ResponseEntity<String> verify(@RequestParam String token){
         return userService.verify(token);
     }
 
     @PostMapping("/resend-verification")
-    public String verifyReSend(@RequestParam String email){
+    public ResponseEntity<String> verifyReSend(@RequestParam String email){
         return userService.resendVerification(email);
     }
 
     @PostMapping("/forgot-password")
-    public String passwordVerification(@RequestParam String email){
+    public ResponseEntity<String> passwordVerification(@RequestParam String email){
         return userService.passwordVerification(email);
     }
 
