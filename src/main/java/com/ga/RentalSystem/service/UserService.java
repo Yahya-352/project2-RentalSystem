@@ -1,6 +1,7 @@
 package com.ga.RentalSystem.service;
 
 
+import com.ga.RentalSystem.dto.request.ChangePasswordRequest;
 import com.ga.RentalSystem.dto.request.LoginRequest;
 import com.ga.RentalSystem.dto.request.RegisterRequest;
 import com.ga.RentalSystem.dto.request.ResetPasswordToken;
@@ -13,6 +14,7 @@ import com.ga.RentalSystem.repository.UserRepository;
 import com.ga.RentalSystem.security.JWTUtils;
 import com.ga.RentalSystem.security.MyUserDetails;
 
+import com.ga.RentalSystem.security.SecurityConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.ResponseEntity;
@@ -173,6 +175,19 @@ public class UserService {
                     .body("Invalid email or password");
         }
 
+    }
+
+    public ResponseEntity<String> changePassword(ChangePasswordRequest changePasswordRequest){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        MyUserDetails myUserDetails = (MyUserDetails) authentication.getPrincipal();
+        User user = myUserDetails.getUser();
+
+        if(!passwordEncoder.matches(changePasswordRequest.oldPassword() , user.getPassword())){
+            return ResponseEntity.status(400).body("Current Password is incorrect");
+        }
+        user.setPassword(passwordEncoder.encode(changePasswordRequest.newPassword()));
+        userRepository.save(user);
+        return ResponseEntity.ok("Password changed succesfully");
     }
 
     public User findUserByEmailAddress(String email){

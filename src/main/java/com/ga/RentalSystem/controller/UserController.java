@@ -34,7 +34,6 @@ public class UserController {
 
     @PostMapping("/resend-verification")
     public String verifyReSend(@RequestParam String email){
-        System.out.println(email);
         return userService.resendVerification(email);
     }
 
