@@ -44,7 +44,7 @@ public class UserController {
     }
 
     @PostMapping("/reset-password")
-    public String resetPassword(@RequestBody ResetPasswordToken resetPasswordToken){
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordToken resetPasswordToken){
         return userService.resetPassword(resetPasswordToken);
     }
 
@@ -55,7 +55,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public User get(@PathVariable Long id) {
+    public ResponseEntity<User> get(@PathVariable Long id) {
         return userService.getUserById(id);
     }
 }

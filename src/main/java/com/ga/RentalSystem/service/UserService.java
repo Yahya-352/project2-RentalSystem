@@ -140,14 +140,14 @@ public class UserService {
     public ResponseEntity<String> resetPassword(ResetPasswordToken resetPasswordToken){
         //check if token is real
         User user = userRepository.findByPasswordRecoveryToken(resetPasswordToken.token())
-                .orElseThrow(() -> new RuntimeException("Invalid token"));
+                .orElseThrow(() -> new InformationNotFoundException("Invalid token"));
 
         //check if user token is not expired and is verified
         if(user.getPasswordRecoveryTokenExpiryDate().isBefore(LocalDateTime.now())){
-            return ResponseEntity.ok().body("Validation Token Expired");
+            throw new BadRequestException("Validation Token Expired");
         }
         if(!user.isVerified()){
-            return "user has to be verified";
+            throw new BadRequestException("user has to be verified");
         }
         //set password and reset token values
         user.setPassword(passwordEncoder.encode(resetPasswordToken.password()));
@@ -155,7 +155,7 @@ public class UserService {
         user.setPasswordRecoveryTokenExpiryDate(null);
         userRepository.save(user);
 
-        return "Password Updated";
+        return ResponseEntity.ok().body("Password Updated");
     }
 
     public ResponseEntity<?> loginUser(LoginRequest loginRequest){
@@ -205,9 +205,11 @@ public class UserService {
         );
     }
 
-    public User getUserById(Long id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public ResponseEntity<User> getUserById(Long id) {
+        User user =  userRepository.findById(id)
+                .orElseThrow(() -> new InformationNotFoundException("User not found"));
+
+        return ResponseEntity.ok().body(user);
     }
 
 }
