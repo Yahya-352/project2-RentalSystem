@@ -5,8 +5,8 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "models")
-public class Model {
+@Table(name = "makes")
+public class Make {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
