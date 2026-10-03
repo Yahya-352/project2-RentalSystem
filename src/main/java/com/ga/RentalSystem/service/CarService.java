@@ -122,6 +122,7 @@ public class CarService {
         return toCarResponse(updatedCar);
     }
 
+    // this method deletes a car that belongs to the current logged owner
     public void deleteCar(Long id , Authentication authentication){
         User currentUser = userRepository.findByEmail(authentication.getName()).orElseThrow(
                 () -> new InformationNotFoundException("User not Found")

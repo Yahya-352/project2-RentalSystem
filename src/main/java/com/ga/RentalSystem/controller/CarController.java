@@ -38,11 +38,16 @@ public class CarController {
         return carService.getMyCars(authentication);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/update/{id}")
     public CarResponse updateCar(@PathVariable Long id,
                                                  @RequestBody CarRequest carRequest,
                                                  Authentication authentication) {
         return carService.updateCar(id, carRequest, authentication);
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public void deleteCar(@PathVariable Long id , Authentication authentication){
+        carService.deleteCar(id , authentication);
     }
 
 }
