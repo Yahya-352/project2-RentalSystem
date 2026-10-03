@@ -122,6 +122,21 @@ public class CarService {
         return toCarResponse(updatedCar);
     }
 
+    public void deleteCar(Long id , Authentication authentication){
+        User currentUser = userRepository.findByEmail(authentication.getName()).orElseThrow(
+                () -> new InformationNotFoundException("User not Found")
+        );
+        Car car = carRepository.findById(id).orElseThrow(
+                () -> new InformationNotFoundException("Car Not Found")
+        );
+        if(!car.getOwner().getId().equals(currentUser.getId())){
+            throw new ForbiddenException("You Do Not Own This Car");
+        }
+        carRepository.delete(car);
+    }
+
+
+
     //template to reduce code as we will need to return car response on every method
     private CarResponse toCarResponse(Car car) {
         return new CarResponse(
