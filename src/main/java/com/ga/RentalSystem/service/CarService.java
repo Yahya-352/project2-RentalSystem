@@ -76,6 +76,13 @@ public class CarService {
         return toCarResponse(car);
     }
 
+    public List<CarResponse> getMyCars(Authentication authentication){
+        User owner = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new InformationNotFoundException("User Not Found"));
+        List<Car> cars = carRepository.findByOwnerId(owner.getId());
+        return cars.stream().map(car ->toCarResponse(car)).toList();
+    }
+
 
     //template to reduce code as we will need to return car response on every method
     private CarResponse toCarResponse(Car car) {
