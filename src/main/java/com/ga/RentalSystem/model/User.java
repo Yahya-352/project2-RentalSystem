@@ -53,4 +53,7 @@ public class User {
     @OneToMany(mappedBy = "renter", cascade = CascadeType.ALL)
     private List<Booking> rentals = new ArrayList<>();
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private UserProfile profile;
+
 }
