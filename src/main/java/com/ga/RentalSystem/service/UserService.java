@@ -147,7 +147,7 @@ public class UserService {
             return ResponseEntity.ok().body("Validation Token Expired");
         }
         if(!user.isVerified()){
-            return "user has to be verified";
+            return ResponseEntity.ok().body("Validation Token Expired");
         }
         //set password and reset token values
         user.setPassword(passwordEncoder.encode(resetPasswordToken.password()));
@@ -155,7 +155,7 @@ public class UserService {
         user.setPasswordRecoveryTokenExpiryDate(null);
         userRepository.save(user);
 
-        return "Password Updated";
+        return ResponseEntity.ok().body("Password Updated");
     }
 
     public ResponseEntity<?> loginUser(LoginRequest loginRequest){
