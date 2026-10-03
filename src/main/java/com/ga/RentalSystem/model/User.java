@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Entity
@@ -48,5 +50,7 @@ public class User {
     @Column
     private LocalDateTime passwordRecoveryTokenExpiryDate;
 
+    @OneToMany(mappedBy = "renter", cascade = CascadeType.ALL)
+    private List<Booking> rentals = new ArrayList<>();
 
 }
