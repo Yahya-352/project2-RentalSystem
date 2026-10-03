@@ -25,6 +25,8 @@ public class CarService {
     private final CarRepository carRepository;
     private final UserRepository userRepository;
 
+    //car creation method , user is required to submit car request dto and method
+    // retrieves user email
     public ResponseEntity<CarResponse> createCar(CarRequest carRequest ,
                                                    Authentication authentication){
         User owner = userRepository.findByEmail(authentication.getName())
@@ -61,17 +63,21 @@ public class CarService {
         return ResponseEntity.status(HttpStatus.CREATED).body(carResponse);
     }
 
+    //get all cars method
     public List<CarResponse> getCars(){
         List<Car> cars =  carRepository.findAll();
         return cars.stream().map(car ->toCarResponse(car)).toList();
     }
 
+    //get car by id method for 1 car retrieval
     public CarResponse getCarById(Long id){
         Car car = carRepository.findById(id)
                 .orElseThrow(() -> new InformationNotFoundException("Car not found"));
         return toCarResponse(car);
     }
 
+
+    //template to reduce code as we will need to return car response on every method
     private CarResponse toCarResponse(Car car) {
         return new CarResponse(
                 car.getId(),
