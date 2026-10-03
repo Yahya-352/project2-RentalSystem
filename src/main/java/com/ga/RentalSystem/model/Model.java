@@ -14,4 +14,8 @@ public class Model {
     @Column(nullable = false , unique = true)
     private String name;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "make_id", nullable = false)
+    private Make make;
+
 }
