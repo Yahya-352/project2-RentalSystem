@@ -5,6 +5,7 @@ import com.ga.RentalSystem.dto.response.CarResponse;
 import com.ga.RentalSystem.enums.FuelType;
 import com.ga.RentalSystem.enums.TransmissionType;
 import com.ga.RentalSystem.exceptions.BadRequestException;
+import com.ga.RentalSystem.exceptions.ForbiddenException;
 import com.ga.RentalSystem.exceptions.InformationNotFoundException;
 import com.ga.RentalSystem.model.Car;
 import com.ga.RentalSystem.model.User;
@@ -76,6 +77,7 @@ public class CarService {
         return toCarResponse(car);
     }
 
+    //this method makes owner based car retrieval
     public List<CarResponse> getMyCars(Authentication authentication){
         User owner = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new InformationNotFoundException("User Not Found"));
@@ -83,6 +85,42 @@ public class CarService {
         return cars.stream().map(car ->toCarResponse(car)).toList();
     }
 
+    // update cars which are your own listing(not another person's)
+    public CarResponse updateCar(Long id, CarRequest carRequest, Authentication authentication) {
+        User currentUser = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new InformationNotFoundException("User not found"));
+
+        Car car = carRepository.findById(id)
+                .orElseThrow(() -> new InformationNotFoundException("Car not found"));
+
+        if (!car.getOwner().getId().equals(currentUser.getId())) {
+            throw new ForbiddenException("You do not own this car");
+        }
+
+        car.setMake(carRequest.make());
+        car.setModel(carRequest.model());
+        car.setCategory(carRequest.category());
+        car.setLocation(carRequest.location());
+        car.setYear(carRequest.year());
+        car.setLicensePlate(carRequest.licensePlate());
+        car.setSeats(carRequest.seats());
+        car.setPricePerDay(carRequest.pricePerDay());
+
+        try {
+            car.setTransmission(TransmissionType.valueOf(carRequest.transmission().toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid transmission type: " + carRequest.transmission());
+        }
+
+        try {
+            car.setFuelType(FuelType.valueOf(carRequest.fuelType().toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid fuel type: " + carRequest.fuelType());
+        }
+
+        Car updatedCar = carRepository.save(car);
+        return toCarResponse(updatedCar);
+    }
 
     //template to reduce code as we will need to return car response on every method
     private CarResponse toCarResponse(Car car) {

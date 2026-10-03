@@ -32,6 +32,11 @@ public class GlobalExceptionHandler {
         return build("Something went wrong", HttpStatus.INTERNAL_SERVER_ERROR, request);
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException ex, HttpServletRequest request) {
+        return build(ex.getMessage(), HttpStatus.FORBIDDEN, request);
+    }
+
     private ResponseEntity<ErrorResponse> build(String message, HttpStatus status, HttpServletRequest request) {
         String errorCode = status.name();
 

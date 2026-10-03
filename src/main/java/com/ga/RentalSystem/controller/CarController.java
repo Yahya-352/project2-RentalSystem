@@ -33,4 +33,16 @@ public class CarController {
         return ResponseEntity.ok(carService.getCarById(id));
     }
 
+    @GetMapping("/my-cars")
+    public List<CarResponse> getMyCars(Authentication authentication) {
+        return carService.getMyCars(authentication);
+    }
+
+    @PutMapping("/{id}")
+    public CarResponse updateCar(@PathVariable Long id,
+                                                 @RequestBody CarRequest carRequest,
+                                                 Authentication authentication) {
+        return carService.updateCar(id, carRequest, authentication);
+    }
+
 }
