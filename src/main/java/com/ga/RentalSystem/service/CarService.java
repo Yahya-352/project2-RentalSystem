@@ -16,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 
 @Service
 @RequiredArgsConstructor
@@ -54,22 +56,37 @@ public class CarService {
 
         Car createdCar = carRepository.save(car);
 
-        CarResponse response = new CarResponse(
-                createdCar.getId(),
-                createdCar.getMake(),
-                createdCar.getModel(),
-                createdCar.getCategory(),
-                createdCar.getLocation(),
-                createdCar.getYear(),
-                createdCar.getLicensePlate(),
-                createdCar.getTransmission().name(),
-                createdCar.getFuelType().name(),
-                createdCar.getSeats(),
-                createdCar.getPricePerDay(),
-                createdCar.isAvailable(),
-                createdCar.getOwner().getUserName()
-        );
+        CarResponse carResponse = toCarResponse(createdCar);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(carResponse);
+    }
+
+    public List<CarResponse> getCars(){
+        List<Car> cars =  carRepository.findAll();
+        return cars.stream().map(car ->toCarResponse(car)).toList();
+    }
+
+    public CarResponse getCarById(Long id){
+        Car car = carRepository.findById(id)
+                .orElseThrow(() -> new InformationNotFoundException("Car not found"));
+        return toCarResponse(car);
+    }
+
+    private CarResponse toCarResponse(Car car) {
+        return new CarResponse(
+                car.getId(),
+                car.getMake(),
+                car.getModel(),
+                car.getCategory(),
+                car.getLocation(),
+                car.getYear(),
+                car.getLicensePlate(),
+                car.getTransmission().name(),
+                car.getFuelType().name(),
+                car.getSeats(),
+                car.getPricePerDay(),
+                car.isAvailable(),
+                car.getOwner().getUserName()
+        );
     }
 }
