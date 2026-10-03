@@ -18,14 +18,16 @@ public class CarController {
     private final CarService carService;
 
     @PostMapping("/create")
-    public ResponseEntity<CarResponse> createCar(CarRequest carRequest ,
+    public ResponseEntity<CarResponse> createCar(@RequestBody CarRequest carRequest ,
                                                  Authentication authentication){
         return carService.createCar(carRequest , authentication);
     }
+
     @GetMapping("/")
     public List<CarResponse> getCars(){
         return carService.getCars();
     }
+
     @GetMapping("/{id}")
     public ResponseEntity<CarResponse> getCarById(@PathVariable Long id) {
         return ResponseEntity.ok(carService.getCarById(id));
