@@ -95,6 +95,23 @@ public class BookingService {
         }
     }
 
+    public BookingResponse rejectBooking(Long bookingId, Authentication authentication) {
+        User currentUser = getCurrentUser(authentication);
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(() ->
+                new InformationNotFoundException("Booking Not Found"));
+
+        if (!booking.getCar().getOwner().getId().equals(currentUser.getId())) {
+            throw new ForbiddenException("You do not own this car");
+        }
+
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new BadRequestException("Only pending bookings can be rejected");
+        }
+
+        booking.setStatus(BookingStatus.REJECTED);
+        return toResponse(bookingRepository.save(booking));
+    }
+
     public boolean isCarAvailable(Long carId , LocalDate startDate , LocalDate endDate){
         List<Booking> bookings = bookingRepository.findByCarId(carId);
         boolean overlap = bookings.stream()
