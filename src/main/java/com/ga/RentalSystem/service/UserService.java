@@ -58,7 +58,15 @@ public class UserService {
         this.authenticationManager = authenticationManager;
     }
 
-    public ResponseEntity<User> createUser(RegisterRequest request){
+    public ResponseEntity<User> registerCustomer(RegisterRequest request) {
+        return createUser(request, Role.CUSTOMER);
+    }
+
+    public ResponseEntity<User> registerAgency(RegisterRequest request) {
+        return createUser(request, Role.AGENCY);
+    }
+
+    public ResponseEntity<User> createUser(RegisterRequest request , Role role){
         if(userRepository.findByEmail(request.email()).isPresent()){
             throw new ConflictException("Email Already Registered");
         }
@@ -66,7 +74,7 @@ public class UserService {
         user.setUserName(request.userName());
         user.setEmail(request.email());
         user.setPassword(passwordEncoder.encode(request.password()));
-        user.setRoleEnum(Role.CUSTOMER);
+        user.setRoleEnum(role);
         user.setUserStatus(UserStatus.ACTIVE);
         user.setVerified(false);
 
