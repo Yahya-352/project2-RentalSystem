@@ -67,6 +67,12 @@ public class BookingService {
         return bookings.stream().map(booking ->toResponse(booking)).toList();
     }
 
+    public List<BookingResponse> getBookingForMyCars(Authentication authentication){
+        User currentUser = getCurrentUser(authentication);
+        List<Booking> bookings = bookingRepository.findByRenterId(currentUser.getId());
+        return bookings.stream().map(booking ->toResponse(booking)).toList();
+    }
+
     public boolean isCarAvailable(Long carId , LocalDate startDate , LocalDate endDate){
         List<Booking> bookings = bookingRepository.findByCarId(carId);
         boolean overlap = bookings.stream()
