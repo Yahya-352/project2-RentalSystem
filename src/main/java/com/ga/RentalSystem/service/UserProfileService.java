@@ -34,9 +34,18 @@ public class UserProfileService {
 
         UserProfile profile = new UserProfile();
         profile.setUser(currentUser);
+        profile.setFirstName(request.firstName());
+        profile.setLastName(request.lastName());
+        profile.setPhoneNumber(request.phoneNumber());
+        profile.setProfilePictureUrl(request.profilePictureUrl());
+        profile.setAddress(request.address());
+        profile.setLicenseNumber(request.licenseNumber());
+        profile.setLicenseFileUrl(request.licenseFileUrl());
 
         UserProfile saved = userProfileRepository.save(profile);
+        return toResponse(saved);
     }
+
     public UserProfileResponse getMyProfile(Authentication authentication){
         User currentUser = getCurrentUser(authentication);
 
