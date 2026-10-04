@@ -59,7 +59,12 @@ public class BookingService {
 
         Booking saved = bookingRepository.save(booking);
         return toResponse(saved);
+    }
 
+    public List<BookingResponse> getMyBookings(Authentication authentication){
+        User currentUser = getCurrentUser(authentication);
+        List<Booking> bookings = bookingRepository.findByRenterId(currentUser.getId());
+        return bookings.stream().map(booking ->toResponse(booking)).toList();
     }
 
     public boolean isCarAvailable(Long carId , LocalDate startDate , LocalDate endDate){
