@@ -2,7 +2,8 @@ package com.ga.RentalSystem.enums;
 
 public enum BookingStatus {
     PENDING,
-    CONFIRMED,
+    APPROVED,
+    REJECTED,
     CANCELLED,
     COMPLETED
 }
