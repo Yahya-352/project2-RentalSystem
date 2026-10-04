@@ -25,4 +25,10 @@ public class UserProfileController {
     public UserProfileResponse getMyProfile(Authentication authentication){
         return userProfileService.getMyProfile(authentication);
     }
+    @PutMapping("/me")
+    public UserProfileResponse updateProfile(
+            @RequestBody UserProfileRequest request,
+            Authentication authentication){
+        return userProfileService.updateProfile(request,authentication);
+    }
 }
