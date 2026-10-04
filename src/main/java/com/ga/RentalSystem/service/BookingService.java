@@ -70,7 +70,7 @@ public class BookingService {
 
     public List<BookingResponse> getBookingForMyCars(Authentication authentication){
         User currentUser = getCurrentUser(authentication);
-        List<Booking> bookings = bookingRepository.findByRenterId(currentUser.getId());
+        List<Booking> bookings = bookingRepository.findByCarOwnerId(currentUser.getId());
         return bookings.stream().map(booking ->toResponse(booking)).toList();
     }
 
