@@ -4,6 +4,7 @@ import com.ga.RentalSystem.dto.request.BookingRequest;
 import com.ga.RentalSystem.dto.response.BookingResponse;
 import com.ga.RentalSystem.enums.BookingStatus;
 import com.ga.RentalSystem.exceptions.BadRequestException;
+import com.ga.RentalSystem.exceptions.ConflictException;
 import com.ga.RentalSystem.exceptions.InformationNotFoundException;
 import com.ga.RentalSystem.model.Booking;
 import com.ga.RentalSystem.model.Car;
@@ -15,8 +16,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
-import java.awt.print.Book;
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -39,6 +41,24 @@ public class BookingService {
         if (request.startDate().isBefore(LocalDate.now())) {
             throw new BadRequestException("Booking cannot start in the past");
         }
+
+        if(!isCarAvailable(request.carId(), request.startDate() , request.endDate())){
+            throw new ConflictException("Car is not available for that specific date");
+        }
+
+        long days = ChronoUnit.DAYS.between(request.startDate(), request.endDate());
+        BigDecimal totalPrice = car.getPricePerDay().multiply(BigDecimal.valueOf(days));
+
+        Booking booking = new Booking();
+        booking.setRenter(renter);
+        booking.setCar(car);
+        booking.setStartDate(request.startDate());
+        booking.setEndDate(request.endDate());
+        booking.setTotalPrice(totalPrice);
+        booking.setStatus(BookingStatus.PENDING);
+
+        Booking saved = bookingRepository.save(booking);
+        return toResponse(saved);
 
     }
 
