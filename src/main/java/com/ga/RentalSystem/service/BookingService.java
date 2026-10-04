@@ -2,6 +2,7 @@ package com.ga.RentalSystem.service;
 
 import com.ga.RentalSystem.dto.request.BookingRequest;
 import com.ga.RentalSystem.dto.response.BookingResponse;
+import com.ga.RentalSystem.enums.BookingStatus;
 import com.ga.RentalSystem.exceptions.BadRequestException;
 import com.ga.RentalSystem.exceptions.InformationNotFoundException;
 import com.ga.RentalSystem.model.Booking;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.awt.print.Book;
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +40,15 @@ public class BookingService {
             throw new BadRequestException("Booking cannot start in the past");
         }
 
+    }
+
+    public boolean isCarAvailable(Long carId , LocalDate startDate , LocalDate endDate){
+        List<Booking> bookings = bookingRepository.findByCarId(carId);
+        boolean overlap = bookings.stream()
+                .filter(b -> b.getStatus().equals(BookingStatus.APPROVED))
+                .noneMatch(b -> startDate.isBefore(b.getEndDate())
+                && endDate.isAfter(b.getStartDate()));
+        return overlap;
     }
 
     private User getCurrentUser(Authentication authentication) {
