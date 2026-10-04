@@ -5,6 +5,7 @@ import com.ga.RentalSystem.dto.response.BookingResponse;
 import com.ga.RentalSystem.enums.BookingStatus;
 import com.ga.RentalSystem.exceptions.BadRequestException;
 import com.ga.RentalSystem.exceptions.ConflictException;
+import com.ga.RentalSystem.exceptions.ForbiddenException;
 import com.ga.RentalSystem.exceptions.InformationNotFoundException;
 import com.ga.RentalSystem.model.Booking;
 import com.ga.RentalSystem.model.Car;
@@ -71,6 +72,27 @@ public class BookingService {
         User currentUser = getCurrentUser(authentication);
         List<Booking> bookings = bookingRepository.findByRenterId(currentUser.getId());
         return bookings.stream().map(booking ->toResponse(booking)).toList();
+    }
+
+    public BookingResponse approveBooking(Long bookingId,Authentication authentication){
+        User currentUser = getCurrentUser(authentication);
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(() ->
+                new InformationNotFoundException("Booking Not Found"));
+
+        if (!booking.getCar().getOwner().getId().equals(currentUser.getId())) {
+            throw new ForbiddenException("You do not own this car");
+        }
+
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new BadRequestException("Only pending bookings can be approved");
+        }
+        if(isCarAvailable(booking.getCar().getId()
+                , booking.getStartDate() , booking.getEndDate())){
+            booking.setStatus(BookingStatus.APPROVED);
+            return toResponse(bookingRepository.save(booking));
+        }else{
+            throw new ConflictException("Car is not available at this date");
+        }
     }
 
     public boolean isCarAvailable(Long carId , LocalDate startDate , LocalDate endDate){
