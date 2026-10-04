@@ -11,6 +11,11 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "bookings")
 public class Booking {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "renter_id", nullable = false)
     private User renter;
