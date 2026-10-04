@@ -55,6 +55,25 @@ public class UserProfileService {
         return toResponse(profile);
     }
 
+    public UserProfileResponse updateProfile(UserProfileRequest request
+            , Authentication authentication){
+        User currentUser = getCurrentUser(authentication);
+
+        UserProfile profile = userProfileRepository.findByUserId(currentUser.getId())
+                .orElseThrow(() -> new InformationNotFoundException("Profile not found"));
+
+        profile.setFirstName(request.firstName());
+        profile.setLastName(request.lastName());
+        profile.setPhoneNumber(request.phoneNumber());
+        profile.setProfilePictureUrl(request.profilePictureUrl());
+        profile.setAddress(request.address());
+        profile.setLicenseNumber(request.licenseNumber());
+        profile.setLicenseFileUrl(request.licenseFileUrl());
+
+        UserProfile updated = userProfileRepository.save(profile);
+        return toResponse(updated);
+    }
+
     private User getCurrentUser(Authentication authentication){
         return userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new InformationNotFoundException("User not found"));
