@@ -38,6 +38,15 @@ public class UserProfileService {
 
         UserProfile saved = userProfileRepository.save(profile);
     }
+    public UserProfileResponse getMyProfile(Authentication authentication){
+        User currentUser = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new InformationNotFoundException("User not found"));
+
+        UserProfile profile = userProfileRepository.findByUserId(currentUser.getId()).orElseThrow(
+                ()->new InformationNotFoundException("Profile Not Found")
+        );
+        return toResponse(profile);
+    }
 
     private UserProfileResponse toResponse(UserProfile profile) {
         return new UserProfileResponse(
