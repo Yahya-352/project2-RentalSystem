@@ -112,6 +112,28 @@ public class BookingService {
         return toResponse(bookingRepository.save(booking));
     }
 
+    public BookingResponse cancelBooking(Long bookingId, Authentication authentication) {
+        User currentUser = getCurrentUser(authentication);
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(() ->
+                new InformationNotFoundException("Booking Not Found"));
+
+        boolean isRenter = booking.getRenter().getId().equals(currentUser.getId());
+        boolean isOwner = booking.getCar().getOwner().getId().equals(currentUser.getId());
+
+        if (!isRenter && !isOwner) {
+            throw new ForbiddenException("You are not involved in this booking");
+        }
+
+        if (booking.getStatus() == BookingStatus.CANCELLED
+                || booking.getStatus() == BookingStatus.REJECTED
+                || booking.getStatus() == BookingStatus.COMPLETED) {
+            throw new BadRequestException("This booking cannot be cancelled");
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        return toResponse(bookingRepository.save(booking));
+    }
+
     public boolean isCarAvailable(Long carId , LocalDate startDate , LocalDate endDate){
         List<Booking> bookings = bookingRepository.findByCarId(carId);
         boolean overlap = bookings.stream()
