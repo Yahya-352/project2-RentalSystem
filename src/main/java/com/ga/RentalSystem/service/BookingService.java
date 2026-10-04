@@ -3,6 +3,7 @@ package com.ga.RentalSystem.service;
 import com.ga.RentalSystem.dto.request.BookingRequest;
 import com.ga.RentalSystem.dto.response.BookingResponse;
 import com.ga.RentalSystem.enums.BookingStatus;
+import com.ga.RentalSystem.enums.Role;
 import com.ga.RentalSystem.exceptions.BadRequestException;
 import com.ga.RentalSystem.exceptions.ConflictException;
 import com.ga.RentalSystem.exceptions.ForbiddenException;
@@ -146,6 +147,15 @@ public class BookingService {
     private User getCurrentUser(Authentication authentication) {
         return userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new InformationNotFoundException("User not found"));
+    }
+
+    public List<BookingResponse> getAllBookings(Authentication authentication) {
+        User currentUser = getCurrentUser(authentication);
+        if (currentUser.getRoleEnum() != Role.ADMIN) {
+            throw new ForbiddenException("Admin access required");
+        }
+        List<Booking> bookings = bookingRepository.findAll();
+        return bookings.stream().map(booking -> toResponse(booking)).toList();
     }
 
     private BookingResponse toResponse(Booking booking) {
