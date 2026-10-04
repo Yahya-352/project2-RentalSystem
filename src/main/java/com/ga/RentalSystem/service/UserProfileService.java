@@ -23,8 +23,7 @@ public class UserProfileService {
 
     public UserProfileResponse createProfile(UserProfileRequest request,
                                              Authentication authentication){
-        User currentUser = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new InformationNotFoundException("User not found"));
+        User currentUser = getCurrentUser(authentication);
 
         if(currentUser.getRoleEnum() != Role.CUSTOMER){
             throw new ForbiddenException("Only customers can create a user profile");
@@ -39,13 +38,17 @@ public class UserProfileService {
         UserProfile saved = userProfileRepository.save(profile);
     }
     public UserProfileResponse getMyProfile(Authentication authentication){
-        User currentUser = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new InformationNotFoundException("User not found"));
+        User currentUser = getCurrentUser(authentication);
 
         UserProfile profile = userProfileRepository.findByUserId(currentUser.getId()).orElseThrow(
                 ()->new InformationNotFoundException("Profile Not Found")
         );
         return toResponse(profile);
+    }
+
+    private User getCurrentUser(Authentication authentication){
+        return userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new InformationNotFoundException("User not found"));
     }
 
     private UserProfileResponse toResponse(UserProfile profile) {
