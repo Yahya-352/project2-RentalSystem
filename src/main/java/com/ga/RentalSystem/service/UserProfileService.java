@@ -37,11 +37,21 @@ public class UserProfileService {
         profile.setUser(currentUser);
 
         UserProfile saved = userProfileRepository.save(profile);
+    }
 
-
-
-
-
+    private UserProfileResponse toResponse(UserProfile profile) {
+        return new UserProfileResponse(
+                profile.getId(),
+                profile.getFirstName(),
+                profile.getLastName(),
+                profile.getPhoneNumber(),
+                profile.getProfilePictureUrl(),
+                profile.getAddress(),
+                profile.getLicenseNumber(),
+                profile.getLicenseFileUrl(),
+                profile.getCreatedAt(),
+                profile.getUpdatedAt()
+        );
     }
 
 }
