@@ -41,6 +41,7 @@ public class SecurityConfiguration {
                                 "/users/verify",
                                 "/users/login",
                                 "/users/register",
+                                "/users/register/agency",
                                 "/users/resend-verification",
                                 "/users/forgot-password",
                                 "/users/reset-password"
