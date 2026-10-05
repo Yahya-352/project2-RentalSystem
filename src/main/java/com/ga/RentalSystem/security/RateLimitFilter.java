@@ -1,24 +1,19 @@
 package com.ga.RentalSystem.security;
 
-import com.ga.RentalSystem.service.NotificationService;
 import com.ga.RentalSystem.service.RateLimitService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Map;
+
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+
 
 @Component
 @RequiredArgsConstructor
@@ -28,7 +23,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private final RateLimitService rateLimitService;
 
-    private static final Set<String> LIMITED_PATHS = Set.of(
+    private final Set<String> LIMITED_PATHS = Set.of(
             "/users/login",
             "/users/register",
             "/users/register/agency",
