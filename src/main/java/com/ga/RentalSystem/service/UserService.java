@@ -18,6 +18,7 @@ import com.ga.RentalSystem.security.JWTUtils;
 import com.ga.RentalSystem.security.MyUserDetails;
 
 import com.ga.RentalSystem.security.SecurityConfiguration;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
@@ -35,6 +36,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 
+@Slf4j
 @Service
 public class UserService {
 
@@ -45,9 +47,13 @@ public class UserService {
     private final JWTUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
 
+    private final AuditLogService auditLogService;   // new
+
+
     @Autowired
     public UserService(UserRepository userRepository,
                        EmailService emailService,
+                       AuditLogService auditLogService,
                        @Lazy PasswordEncoder passwordEncoder,
                        JWTUtils jwtUtils,
                        @Lazy AuthenticationManager authenticationManager) {
@@ -56,6 +62,7 @@ public class UserService {
         this.jwtUtils = jwtUtils;
         this.emailService = emailService;
         this.authenticationManager = authenticationManager;
+        this.auditLogService = auditLogService;
     }
 
     public ResponseEntity<User> registerCustomer(RegisterRequest request) {
@@ -83,9 +90,16 @@ public class UserService {
         user.setVerificationTokenExpiryDate(LocalDateTime.now().plusHours(1));
 
         String link = "http://localhost:8080/users/verify?token=" + token;
+
         emailService.sendEmail(user.getEmail(), "Verify your account",
                 "Click to verify: " + link);
         User createdUser = userRepository.save(user);
+
+        String message = "User " + createdUser.getId() + " registered as " + role;
+        log.info(message);
+        auditLogService.log(createdUser.getId(), "USER_REGISTERED", "User", createdUser.getId(), message);
+
+
         return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
 
@@ -100,6 +114,11 @@ public class UserService {
         user.setVerified(true);
         user.setVerificationToken(null);
         userRepository.save(user);
+
+        String message = "User " + user.getId() + " verified their email";
+        log.info(message);
+        auditLogService.log(user.getId(), "EMAIL_VERIFIED", "User", user.getId(), message);
+
         return ResponseEntity.ok().body("Account verified!");
     }
 
@@ -163,6 +182,11 @@ public class UserService {
         user.setPasswordRecoveryTokenExpiryDate(null);
         userRepository.save(user);
 
+        String message = "User " + user.getId() + " reset their password";
+        log.info(message);
+        auditLogService.log(user.getId(), "PASSWORD_RESET", "User", user.getId(), message);
+
+
         return ResponseEntity.ok().body("Password Updated");
     }
 
@@ -204,6 +228,11 @@ public class UserService {
         }
         user.setPassword(passwordEncoder.encode(changePasswordRequest.newPassword()));
         userRepository.save(user);
+
+        String message = "User " + user.getId() + " changed their password";
+        log.info(message);
+        auditLogService.log(user.getId(), "PASSWORD_CHANGED", "User", user.getId(), message);
+
         return ResponseEntity.ok("Password changed succesfully");
     }
 

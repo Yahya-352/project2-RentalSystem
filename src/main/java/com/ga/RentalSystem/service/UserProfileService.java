@@ -12,14 +12,17 @@ import com.ga.RentalSystem.model.UserProfile;
 import com.ga.RentalSystem.repository.UserProfileRepository;
 import com.ga.RentalSystem.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserProfileService {
     private final UserProfileRepository userProfileRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     public UserProfileResponse createProfile(UserProfileRequest request,
                                              Authentication authentication){
@@ -43,6 +46,11 @@ public class UserProfileService {
         profile.setLicenseFileUrl(request.licenseFileUrl());
 
         UserProfile saved = userProfileRepository.save(profile);
+
+        String message = "User " + currentUser.getId() + " created their profile";
+        log.info(message);
+        auditLogService.log(currentUser.getId(), "PROFILE_CREATED", "UserProfile", saved.getId(), message);
+
         return toResponse(saved);
     }
 
@@ -71,6 +79,10 @@ public class UserProfileService {
         profile.setLicenseFileUrl(request.licenseFileUrl());
 
         UserProfile updated = userProfileRepository.save(profile);
+        String message = "User " + currentUser.getId() + " updated their profile";
+        log.info(message);
+        auditLogService.log(currentUser.getId(), "PROFILE_UPDATED", "UserProfile", updated.getId(), message);
+
         return toResponse(updated);
     }
 
