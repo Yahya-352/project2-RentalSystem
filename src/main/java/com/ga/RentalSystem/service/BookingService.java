@@ -167,6 +167,10 @@ public class BookingService {
             throw new BadRequestException("This booking cannot be cancelled");
         }
 
+        String message = "Booking " + booking.getId() + " cancelled by user " + currentUser.getId();
+        log.info(message);
+        auditLogService.log(currentUser.getId(), "BOOKING_CANCELLED", "Booking", booking.getId(), message);
+
         booking.setStatus(BookingStatus.CANCELLED);
         return toResponse(bookingRepository.save(booking));
     }
