@@ -4,8 +4,11 @@ import com.ga.RentalSystem.enums.FuelType;
 import com.ga.RentalSystem.enums.TransmissionType;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @Entity
@@ -36,4 +39,10 @@ public class Car {
     private int seats;
     private BigDecimal pricePerDay;
     private boolean available = true;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 }

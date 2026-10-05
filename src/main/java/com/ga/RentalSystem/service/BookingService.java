@@ -181,7 +181,9 @@ public class BookingService {
                 booking.getStartDate(),
                 booking.getEndDate(),
                 booking.getTotalPrice(),
-                booking.getStatus()
+                booking.getStatus(),
+                booking.getCreatedAt(),
+                booking.getUpdatedAt()
         );
     }
 

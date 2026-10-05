@@ -22,6 +22,7 @@ public class NotificationController {
     private final NotificationService notificationService;
     private final UserRepository userRepository;
 
+    //finds logged in user then calls subscribe method which returns an SSE Emitter(open connection)
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(Authentication authentication) throws IOException {
         User user = userRepository.findByEmail(authentication.getName())

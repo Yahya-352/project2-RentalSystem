@@ -18,6 +18,7 @@ public class NotificationService {
         //creations connection object with 0 timeout
         SseEmitter emitter = new SseEmitter(0L);
         //saves the connections
+        //quick note: arraylist cant be modified in a loop(concurrent modification exception)
         emitters.computeIfAbsent(userId, k -> new CopyOnWriteArrayList<>()).add(emitter);
 
         //just to check if we are connected in postman(test)
