@@ -12,6 +12,7 @@ import com.ga.RentalSystem.model.User;
 import com.ga.RentalSystem.repository.CarRepository;
 import com.ga.RentalSystem.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -19,12 +20,15 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@Slf4j
 
 @Service
 @RequiredArgsConstructor
 public class CarService {
     private final CarRepository carRepository;
     private final UserRepository userRepository;
+
+    private final AuditLogService auditLogService;
 
     //car creation method , user is required to submit car request dto and method
     // retrieves user email
@@ -58,6 +62,10 @@ public class CarService {
         }
 
         Car createdCar = carRepository.save(car);
+
+        String message = "User " + owner.getId() + " created Car " + createdCar.getId();
+        log.info(message);
+        auditLogService.log(owner.getId(), "CAR_CREATED", "Car", createdCar.getId(), message);
 
         CarResponse carResponse = toCarResponse(createdCar);
 
@@ -119,6 +127,11 @@ public class CarService {
         }
 
         Car updatedCar = carRepository.save(car);
+
+        String message = "User " + currentUser.getId() + " updated Car " + car.getId();
+        log.info(message);
+        auditLogService.log(currentUser.getId(), "CAR_UPDATED", "Car", car.getId(), message);
+
         return toCarResponse(updatedCar);
     }
 
@@ -134,6 +147,10 @@ public class CarService {
             throw new ForbiddenException("You Do Not Own This Car");
         }
         carRepository.delete(car);
+
+        String message = "User " + currentUser.getId() + " deleted Car " + car.getId();
+        log.info(message);
+        auditLogService.log(currentUser.getId(), "CAR_DELETED", "Car", car.getId(), message);
     }
 
 
