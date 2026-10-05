@@ -277,4 +277,23 @@ public class UserService {
         auditLogService.log(admin.getId(), "USER_DEACTIVATED", "User", user.getId(), message);
     }
 
+    public void activateUser(Long userId , Authentication authentication){
+
+        User admin = findUserByEmailAddress(authentication.getName());
+
+        User user = userRepository.findById(userId).orElseThrow(
+                () -> new InformationNotFoundException("User not found")
+        );
+        if(user.getUserStatus() == UserStatus.ACTIVE){
+            throw new ConflictException("User is already active");
+        }
+
+        user.setUserStatus(UserStatus.ACTIVE);
+        userRepository.save(user);
+
+        String message = "Admin " + admin.getId() + " activated User " + user.getId();
+        log.info(message);
+        auditLogService.log(admin.getId(), "USER_ACTIVATED", "User", user.getId(), message);
+    }
+
 }

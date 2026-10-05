@@ -9,6 +9,8 @@ import com.ga.RentalSystem.model.User;
 import com.ga.RentalSystem.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -62,5 +64,17 @@ public class UserController {
     @GetMapping("/{id}")
     public User get(@PathVariable Long id) {
         return userService.getUserById(id);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/deactivate")
+    public void deactivateUser(@PathVariable Long id, Authentication authentication) {
+        userService.deactivateUser(id, authentication);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/activate")
+    public void activateUser(@PathVariable Long id, Authentication authentication) {
+        userService.activateUser(id, authentication);
     }
 }
