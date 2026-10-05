@@ -30,6 +30,8 @@ public class BookingService {
     private final CarRepository carRepository;
     private final UserRepository userRepository;
 
+    private final NotificationService notificationService;
+
     public BookingResponse createBooking(BookingRequest request , Authentication authentication){
         User renter = getCurrentUser(authentication);
 
@@ -60,7 +62,11 @@ public class BookingService {
         booking.setStatus(BookingStatus.PENDING);
 
         Booking saved = bookingRepository.save(booking);
-        return toResponse(saved);
+
+        BookingResponse response = toResponse(saved);
+        notificationService.sendEvent(car.getOwner().getId(), "BOOKING_CREATED", response);
+        return response;
+
     }
 
     public List<BookingResponse> getMyBookings(Authentication authentication){
@@ -89,8 +95,12 @@ public class BookingService {
         }
         if(isCarAvailable(booking.getCar().getId()
                 , booking.getStartDate() , booking.getEndDate())){
+
             booking.setStatus(BookingStatus.APPROVED);
-            return toResponse(bookingRepository.save(booking));
+            BookingResponse response = toResponse(bookingRepository.save(booking));
+
+            notificationService.sendEvent(booking.getRenter().getId(), "BOOKING_APPROVED", response);
+            return response;
         }else{
             throw new ConflictException("Car is not available at this date");
         }
@@ -110,7 +120,10 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.REJECTED);
-        return toResponse(bookingRepository.save(booking));
+
+        BookingResponse response = toResponse(bookingRepository.save(booking));
+        notificationService.sendEvent(booking.getRenter().getId(), "BOOKING_REJECTED", response);
+        return response;
     }
 
     public BookingResponse cancelBooking(Long bookingId, Authentication authentication) {
