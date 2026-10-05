@@ -7,6 +7,9 @@ import com.ga.RentalSystem.dto.request.ResetPasswordToken;
 import com.ga.RentalSystem.model.User;
 
 import com.ga.RentalSystem.service.UserService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,42 +24,44 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping("/register")
-    public ResponseEntity<User> registerCustomer(@RequestBody RegisterRequest registerRequest){
+    public ResponseEntity<User> registerCustomer(@RequestBody @Valid RegisterRequest registerRequest){
         return userService.registerCustomer(registerRequest);
     }
 
     @PostMapping("/register/agency")
-    public ResponseEntity<User> registerAgency(@RequestBody RegisterRequest registerRequest){
+    public ResponseEntity<User> registerAgency(@RequestBody @Valid RegisterRequest registerRequest){
         return userService.registerAgency(registerRequest);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest){
+    public ResponseEntity<?> login(@RequestBody @Valid LoginRequest loginRequest){
         return userService.loginUser(loginRequest);
     }
 
     @GetMapping("/verify")
-    public ResponseEntity<String> verify(@RequestParam String token){
+    public ResponseEntity<String> verify(@RequestParam @NotBlank(message = "Token is required") String token){
         return userService.verify(token);
     }
 
     @PostMapping("/resend-verification")
-    public ResponseEntity<String> verifyReSend(@RequestParam String email){
+    public ResponseEntity<String> verifyReSend(@RequestParam @NotBlank(message = "Email is required")
+                                                   @Email(message = "Email is not valid") String email){
         return userService.resendVerification(email);
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<String> passwordVerification(@RequestParam String email){
+    public ResponseEntity<String> passwordVerification(@RequestParam @NotBlank(message = "Email is required")
+                                                           @Email(message = "Email is not valid") String email){
         return userService.passwordVerification(email);
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordToken resetPasswordToken){
+    public ResponseEntity<String> resetPassword(@RequestBody @Valid ResetPasswordToken resetPasswordToken){
         return userService.resetPassword(resetPasswordToken);
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<String> changePassword(@RequestBody ChangePasswordRequest
+    public ResponseEntity<String> changePassword(@RequestBody @Valid ChangePasswordRequest
                                                              changePasswordRequest){
         return userService.changePassword(changePasswordRequest);
     }

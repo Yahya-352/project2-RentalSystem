@@ -4,7 +4,9 @@ import com.ga.RentalSystem.dto.request.CarRequest;
 import com.ga.RentalSystem.dto.response.CarResponse;
 import com.ga.RentalSystem.model.Car;
 import com.ga.RentalSystem.service.CarService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -20,7 +22,7 @@ public class CarController {
 
     @PreAuthorize("hasRole('AGENCY')")
     @PostMapping("/create")
-    public ResponseEntity<CarResponse> createCar(@RequestBody CarRequest carRequest ,
+    public ResponseEntity<CarResponse> createCar(@RequestBody @Valid CarRequest carRequest ,
                                                  Authentication authentication){
         return carService.createCar(carRequest , authentication);
     }
@@ -44,7 +46,7 @@ public class CarController {
     @PreAuthorize("hasRole('AGENCY')")
     @PutMapping("/update/{id}")
     public CarResponse updateCar(@PathVariable Long id,
-                                                 @RequestBody CarRequest carRequest,
+                                                 @RequestBody @Valid CarRequest carRequest,
                                                  Authentication authentication) {
         return carService.updateCar(id, carRequest, authentication);
     }
