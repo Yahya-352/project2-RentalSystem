@@ -11,15 +11,18 @@ import com.ga.RentalSystem.model.User;
 import com.ga.RentalSystem.repository.AgencyProfileRepository;
 import com.ga.RentalSystem.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AgencyProfileService {
 
     private final AgencyProfileRepository agencyProfileRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     public AgencyProfileResponse createProfile(AgencyProfileRequest request, Authentication authentication) {
         User currentUser = getCurrentUser(authentication);
@@ -39,6 +42,11 @@ public class AgencyProfileService {
         profile.setLogoUrl(request.logoUrl());
 
         AgencyProfile saved = agencyProfileRepository.save(profile);
+
+        String message = "Agency " + currentUser.getId() + " created their profile";
+        log.info(message);
+        auditLogService.log(currentUser.getId(), "PROFILE_CREATED", "AgencyProfile", saved.getId(), message);
+
         return toResponse(saved);
     }
 
@@ -61,6 +69,12 @@ public class AgencyProfileService {
         profile.setLogoUrl(request.logoUrl());
 
         AgencyProfile updated = agencyProfileRepository.save(profile);
+
+        String message = "Agency " + currentUser.getId() + " updated their profile";
+        log.info(message);
+        auditLogService.log(currentUser.getId(),
+                "PROFILE_UPDATED", "AgencyProfile", updated.getId(), message);
+
         return toResponse(updated);
     }
 
