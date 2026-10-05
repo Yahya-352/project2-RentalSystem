@@ -11,10 +11,12 @@ import com.ga.RentalSystem.exceptions.InformationNotFoundException;
 import com.ga.RentalSystem.model.Booking;
 import com.ga.RentalSystem.model.Car;
 import com.ga.RentalSystem.model.User;
+import com.ga.RentalSystem.repository.AuditLogRepository;
 import com.ga.RentalSystem.repository.BookingRepository;
 import com.ga.RentalSystem.repository.CarRepository;
 import com.ga.RentalSystem.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BookingService {
@@ -32,6 +35,7 @@ public class BookingService {
     private final UserRepository userRepository;
 
     private final NotificationService notificationService;
+    private final AuditLogService auditLogService;
 
     public BookingResponse createBooking(BookingRequest request , Authentication authentication){
         User renter = getCurrentUser(authentication);
@@ -65,7 +69,13 @@ public class BookingService {
         Booking saved = bookingRepository.save(booking);
 
         BookingResponse response = toResponse(saved);
+        //notification
         notificationService.sendEvent(car.getOwner().getId(), "BOOKING_CREATED", response);
+
+        //logging
+        String message = "Booking " + booking.getId() + " created by user " + renter.getId();
+        log.info(message);
+        auditLogService.log(renter.getId(), "BOOKING_CREATED", "Booking", saved.getId(), message);
         return response;
 
     }
@@ -100,7 +110,12 @@ public class BookingService {
             booking.setStatus(BookingStatus.APPROVED);
             BookingResponse response = toResponse(bookingRepository.save(booking));
 
+            String message = "Booking " + booking.getId() + " approved by Agency " + currentUser.getId();
+            log.info(message);
+            auditLogService.log(currentUser.getId(), "BOOKING_APPROVED", "Booking", booking.getId(), message);
+
             notificationService.sendEvent(booking.getRenter().getId(), "BOOKING_APPROVED", response);
+
             return response;
         }else{
             throw new ConflictException("Car is not available at this date");
@@ -123,6 +138,13 @@ public class BookingService {
         booking.setStatus(BookingStatus.REJECTED);
 
         BookingResponse response = toResponse(bookingRepository.save(booking));
+
+
+        String message = "Booking " + booking.getId() + " Rejected by Agency " + currentUser.getId();
+        log.info(message);
+        auditLogService.log(currentUser.getId(), "BOOKING_REJECTED", "Booking", booking.getId(), message);
+
+
         notificationService.sendEvent(booking.getRenter().getId(), "BOOKING_REJECTED", response);
         return response;
     }
