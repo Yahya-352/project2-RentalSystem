@@ -14,7 +14,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -26,12 +28,24 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private final RateLimitService rateLimitService;
 
+    private static final Set<String> LIMITED_PATHS = Set.of(
+            "/users/login",
+            "/users/register",
+            "/users/register/agency",
+            "/users/forgot-password",
+            "/users/reset-password");
+
     @Override
     public void doFilterInternal(HttpServletRequest request,
                                  HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String path = request.getRequestURI();
         String ipAddress = request.getRemoteAddr();
         String key = ipAddress + ":" + path;
+
+        if(!LIMITED_PATHS.contains(path)){
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         int tryAfter = rateLimitService.checkLimit(key , rateLimit , 60);
 
@@ -45,7 +59,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
                     + tryAfter + " seconds\"}");
             return;
         }
-
         filterChain.doFilter(request, response);
 
     }
