@@ -24,6 +24,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -211,7 +212,13 @@ public class UserService {
                     myUserDetails.getUsername(),
                     myUserDetails.getUser().getRoleEnum().name()));
 
-        }catch (AuthenticationException authenticationException){
+        } catch (DisabledException disabledException){
+        log.warn("Login blocked for deactivated account {}", loginRequest.email());
+        return ResponseEntity.status(403)
+                .body("Your account has been deactivated");
+        }
+
+        catch (AuthenticationException authenticationException){
             return ResponseEntity.status(401)
                     .body("Invalid email or password");
         }
@@ -254,6 +261,13 @@ public class UserService {
         User user = userRepository.findById(userId).orElseThrow(
                 () -> new InformationNotFoundException("User not found")
         );
+
+        if(admin.getId().equals(user.getId())){
+            throw new BadRequestException("You cannot deactivate your own account");
+        }
+        if(user.getUserStatus() == UserStatus.INACTIVE){
+            throw new ConflictException("User is already inactive");
+        }
 
         user.setUserStatus(UserStatus.INACTIVE);
         userRepository.save(user);

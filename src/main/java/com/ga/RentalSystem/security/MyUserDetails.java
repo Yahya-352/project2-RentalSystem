@@ -1,5 +1,6 @@
 package com.ga.RentalSystem.security;
 
+import com.ga.RentalSystem.enums.UserStatus;
 import com.ga.RentalSystem.model.User;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -52,6 +53,6 @@ public class MyUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return user.getUserStatus() == UserStatus.ACTIVE;
     }
 }
