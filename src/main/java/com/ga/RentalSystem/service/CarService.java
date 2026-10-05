@@ -153,7 +153,9 @@ public class CarService {
                 car.getSeats(),
                 car.getPricePerDay(),
                 car.isAvailable(),
-                car.getOwner().getUserName()
+                car.getOwner().getUserName(),
+                car.getCreatedAt(),
+                car.getUpdatedAt()
         );
     }
 }

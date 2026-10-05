@@ -1,6 +1,7 @@
 package com.ga.RentalSystem.dto.response;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public record CarResponse(
         Long id,
@@ -15,5 +16,7 @@ public record CarResponse(
         int seats,
         BigDecimal pricePerDay,
         boolean available,
-        String ownerUsername
+        String ownerUsername,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {}
