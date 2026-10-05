@@ -15,6 +15,7 @@ import com.ga.RentalSystem.repository.BookingRepository;
 import com.ga.RentalSystem.repository.CarRepository;
 import com.ga.RentalSystem.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 

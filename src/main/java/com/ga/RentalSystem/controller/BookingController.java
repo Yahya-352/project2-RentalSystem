@@ -5,6 +5,7 @@ import com.ga.RentalSystem.dto.response.BookingResponse;
 import com.ga.RentalSystem.service.BookingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +18,7 @@ public class BookingController {
     private final BookingService bookingService;
 
     @PostMapping
+    @PreAuthorize("hasRole('CUSTOMER')")
     public BookingResponse createBooking(@RequestBody BookingRequest request,
                                                          Authentication authentication) {
         BookingResponse response = bookingService.createBooking(request, authentication);
@@ -24,34 +26,40 @@ public class BookingController {
     }
 
     @GetMapping("/me")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public List<BookingResponse> getMyBookings(Authentication authentication) {
         return bookingService.getMyBookings(authentication);
     }
 
 
     @GetMapping("/my-cars")
+    @PreAuthorize("hasRole('AGENCY')")
     public List<BookingResponse> getBookingForMyCars(Authentication authentication) {
         return bookingService.getBookingForMyCars(authentication);
     }
 
     @PatchMapping("/{id}/approve")
+    @PreAuthorize("hasRole('AGENCY')")
     public BookingResponse approveBooking(@PathVariable("id") Long id,
                                           Authentication authentication) {
         return bookingService.approveBooking(id, authentication);
     }
 
     @PatchMapping("/{id}/reject")
+    @PreAuthorize("hasRole('AGENCY')")
     public BookingResponse rejectBooking(@PathVariable("id") Long id,
                                          Authentication authentication) {
         return bookingService.rejectBooking(id, authentication);
     }
 
+    @PreAuthorize("hasAnyRole('CUSTOMER','AGENCY')")
     @PatchMapping("/{id}/cancel")
     public BookingResponse cancelBooking(@PathVariable("id") Long id,
                                          Authentication authentication) {
         return bookingService.cancelBooking(id, authentication);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<BookingResponse> getAllBookings(Authentication authentication) {
         return bookingService.getAllBookings(authentication);
