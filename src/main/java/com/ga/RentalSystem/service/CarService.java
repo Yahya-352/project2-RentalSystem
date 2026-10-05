@@ -82,6 +82,9 @@ public class CarService {
     public CarResponse getCarById(Long id){
         Car car = carRepository.findById(id)
                 .orElseThrow(() -> new InformationNotFoundException("Car not found"));
+        if(car.isDeleted()){
+            throw new InformationNotFoundException("Car Not Found");
+        }
         return toCarResponse(car);
     }
 
@@ -90,7 +93,7 @@ public class CarService {
         User owner = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new InformationNotFoundException("User Not Found"));
         List<Car> cars = carRepository.findByOwnerId(owner.getId());
-        return cars.stream().map(car ->toCarResponse(car)).toList();
+        return cars.stream().filter(car -> !car.isDeleted()).map(car ->toCarResponse(car)).toList();
     }
 
     // update cars which are your own listing(not another person's)
@@ -100,6 +103,9 @@ public class CarService {
 
         Car car = carRepository.findById(id)
                 .orElseThrow(() -> new InformationNotFoundException("Car not found"));
+        if(car.isDeleted()){
+            throw new InformationNotFoundException("Car Not Found");
+        }
 
         if (!car.getOwner().getId().equals(currentUser.getId())) {
             throw new ForbiddenException("You do not own this car");
@@ -143,10 +149,14 @@ public class CarService {
         Car car = carRepository.findById(id).orElseThrow(
                 () -> new InformationNotFoundException("Car Not Found")
         );
+        if(car.isDeleted()){
+            throw new InformationNotFoundException("Car not found");
+        }
         if(!car.getOwner().getId().equals(currentUser.getId())){
             throw new ForbiddenException("You Do Not Own This Car");
         }
         car.setDeleted(true);
+        car.setAvailable(false);
         carRepository.save(car);
         String message = "User " + currentUser.getId() + " deleted Car " + car.getId();
         log.info(message);

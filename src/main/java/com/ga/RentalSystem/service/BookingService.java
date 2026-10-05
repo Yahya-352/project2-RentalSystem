@@ -43,6 +43,10 @@ public class BookingService {
         Car car = carRepository.findById(request.carId())
                 .orElseThrow(() -> new InformationNotFoundException("Car not found"));
 
+        if(car.isDeleted() || !car.isAvailable()){
+            throw new InformationNotFoundException("Car not found");
+        }
+
         if (!request.startDate().isBefore(request.endDate())) {
             throw new BadRequestException("Start date must be before end date");
         }
