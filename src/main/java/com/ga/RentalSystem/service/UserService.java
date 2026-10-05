@@ -247,4 +247,20 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
+    public void deactivateUser(Long userId , Authentication authentication){
+
+        User admin = findUserByEmailAddress(authentication.getName());
+
+        User user = userRepository.findById(userId).orElseThrow(
+                () -> new InformationNotFoundException("User not found")
+        );
+
+        user.setUserStatus(UserStatus.INACTIVE);
+        userRepository.save(user);
+
+        String message = "Admin " + admin.getId() + " deactivated User " + user.getId();
+        log.info(message);
+        auditLogService.log(admin.getId(), "USER_DEACTIVATED", "User", user.getId(), message);
+    }
+
 }
