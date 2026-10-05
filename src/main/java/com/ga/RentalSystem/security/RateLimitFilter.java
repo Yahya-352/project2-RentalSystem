@@ -26,6 +26,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String ipAddress = request.getRemoteAddr();
         String key = ipAddress + ":" + path;
+
+
+
+        filterChain.doFilter(request, response);
+
     }
 
 }
