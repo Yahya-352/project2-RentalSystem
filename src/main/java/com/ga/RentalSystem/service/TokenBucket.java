@@ -26,6 +26,14 @@ class TokenBucket {
         return false;
     }
 
+    public double secondsUntilNextToken(){
+        refill();
+        if(tokens >= 1){
+            return 0;
+        }
+        return (1- tokens) / refillRate;
+    }
+
 
     private void refill() {
         long now = System.nanoTime();
