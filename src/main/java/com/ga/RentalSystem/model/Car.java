@@ -40,6 +40,8 @@ public class Car {
     private BigDecimal pricePerDay;
     private boolean available = true;
 
+    private boolean deleted = false;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

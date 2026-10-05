@@ -74,7 +74,7 @@ public class CarService {
 
     //get all cars method
     public List<CarResponse> getCars(){
-        List<Car> cars =  carRepository.findAll();
+        List<Car> cars =  carRepository.findByDeletedFalse();
         return cars.stream().map(car ->toCarResponse(car)).toList();
     }
 
@@ -146,8 +146,8 @@ public class CarService {
         if(!car.getOwner().getId().equals(currentUser.getId())){
             throw new ForbiddenException("You Do Not Own This Car");
         }
-        carRepository.delete(car);
-
+        car.setDeleted(true);
+        carRepository.save(car);
         String message = "User " + currentUser.getId() + " deleted Car " + car.getId();
         log.info(message);
         auditLogService.log(currentUser.getId(), "CAR_DELETED", "Car", car.getId(), message);
