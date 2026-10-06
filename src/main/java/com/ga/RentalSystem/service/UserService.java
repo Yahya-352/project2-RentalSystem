@@ -7,6 +7,7 @@ import com.ga.RentalSystem.dto.request.RegisterRequest;
 import com.ga.RentalSystem.dto.request.ResetPasswordToken;
 import com.ga.RentalSystem.dto.response.LoginResponse;
 
+import com.ga.RentalSystem.dto.response.RegisterResponse;
 import com.ga.RentalSystem.enums.Role;
 import com.ga.RentalSystem.enums.UserStatus;
 import com.ga.RentalSystem.exceptions.BadRequestException;
@@ -17,7 +18,6 @@ import com.ga.RentalSystem.repository.UserRepository;
 import com.ga.RentalSystem.security.JWTUtils;
 import com.ga.RentalSystem.security.MyUserDetails;
 
-import com.ga.RentalSystem.security.SecurityConfiguration;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -25,6 +25,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -66,15 +67,15 @@ public class UserService {
         this.auditLogService = auditLogService;
     }
 
-    public ResponseEntity<User> registerCustomer(RegisterRequest request) {
+    public ResponseEntity<RegisterResponse> registerCustomer(RegisterRequest request) {
         return createUser(request, Role.CUSTOMER);
     }
 
-    public ResponseEntity<User> registerAgency(RegisterRequest request) {
+    public ResponseEntity<RegisterResponse> registerAgency(RegisterRequest request) {
         return createUser(request, Role.AGENCY);
     }
 
-    public ResponseEntity<User> createUser(RegisterRequest request , Role role){
+    public ResponseEntity<RegisterResponse> createUser(RegisterRequest request , Role role){
         if(userRepository.findByEmail(request.email()).isPresent()){
             throw new ConflictException("Email Already Registered");
         }
@@ -83,7 +84,11 @@ public class UserService {
         user.setEmail(request.email());
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setRoleEnum(role);
-        user.setUserStatus(UserStatus.ACTIVE);
+        if (role == Role.AGENCY) {
+            user.setUserStatus(UserStatus.UNAPPROVED_AGENCY);
+        } else {
+            user.setUserStatus(UserStatus.ACTIVE);
+        }
         user.setVerified(false);
 
         String token = UUID.randomUUID().toString();
@@ -100,8 +105,14 @@ public class UserService {
         log.info(message);
         auditLogService.log(createdUser.getId(), "USER_REGISTERED", "User", createdUser.getId(), message);
 
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+        RegisterResponse response = new RegisterResponse(
+                createdUser.getId(),
+                createdUser.getUserName(),
+                createdUser.getEmail(),
+                createdUser.getUserStatus().name(),
+                "Registration successful. Please check your email to verify your account."
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     public ResponseEntity<String> verify(String token){
@@ -168,14 +179,14 @@ public class UserService {
     public ResponseEntity<String> resetPassword(ResetPasswordToken resetPasswordToken){
         //check if token is real
         User user = userRepository.findByPasswordRecoveryToken(resetPasswordToken.token())
-                .orElseThrow(() -> new RuntimeException("Invalid token"));
+                .orElseThrow(() -> new BadRequestException("Invalid token"));
 
         //check if user token is not expired and is verified
         if(user.getPasswordRecoveryTokenExpiryDate().isBefore(LocalDateTime.now())){
-            return ResponseEntity.ok().body("Validation Token Expired");
+            throw new BadRequestException("Validation Token Expired");
         }
         if(!user.isVerified()){
-            return ResponseEntity.ok().body("Validation Token Expired");
+            throw new BadRequestException("Please Verify your email first");
         }
         //set password and reset token values
         user.setPassword(passwordEncoder.encode(resetPasswordToken.password()));
@@ -212,7 +223,12 @@ public class UserService {
                     myUserDetails.getUsername(),
                     myUserDetails.getUser().getRoleEnum().name()));
 
-        } catch (DisabledException disabledException){
+        } catch (LockedException lockedException){
+        log.warn("Login blocked for unapproved agency {}", loginRequest.email());
+        return ResponseEntity.status(403)
+                .body("Your agency account is waiting for admin approval");
+        }
+        catch (DisabledException disabledException){
         log.warn("Login blocked for deactivated account {}", loginRequest.email());
         return ResponseEntity.status(403)
                 .body("Your account has been deactivated");
@@ -249,11 +265,6 @@ public class UserService {
         );
     }
 
-    public User getUserById(Long id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-    }
-
     public void deactivateUser(Long userId , Authentication authentication){
 
         User admin = findUserByEmailAddress(authentication.getName());
@@ -288,12 +299,19 @@ public class UserService {
             throw new ConflictException("User is already active");
         }
 
+        String action = "USER_ACTIVATED";
+        String message = "Admin " + admin.getId() + " activated User " + user.getId();
+
+        if(user.getUserStatus() == UserStatus.UNAPPROVED_AGENCY){
+            action = "AGENCY_APPROVED";
+            message = "Admin " + admin.getId() + " approved Agency " + user.getId();
+        }
+
         user.setUserStatus(UserStatus.ACTIVE);
         userRepository.save(user);
 
-        String message = "Admin " + admin.getId() + " activated User " + user.getId();
         log.info(message);
-        auditLogService.log(admin.getId(), "USER_ACTIVATED", "User", user.getId(), message);
+        auditLogService.log(admin.getId(), action, "User", user.getId(), message);
     }
 
 }

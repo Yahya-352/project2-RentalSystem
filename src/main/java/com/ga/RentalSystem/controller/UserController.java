@@ -4,7 +4,7 @@ import com.ga.RentalSystem.dto.request.ChangePasswordRequest;
 import com.ga.RentalSystem.dto.request.LoginRequest;
 import com.ga.RentalSystem.dto.request.RegisterRequest;
 import com.ga.RentalSystem.dto.request.ResetPasswordToken;
-import com.ga.RentalSystem.model.User;
+import com.ga.RentalSystem.dto.response.RegisterResponse;
 
 import com.ga.RentalSystem.service.UserService;
 import jakarta.validation.Valid;
@@ -24,12 +24,12 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping("/register")
-    public ResponseEntity<User> registerCustomer(@RequestBody @Valid RegisterRequest registerRequest){
+    public ResponseEntity<RegisterResponse> registerCustomer(@RequestBody @Valid RegisterRequest registerRequest){
         return userService.registerCustomer(registerRequest);
     }
 
     @PostMapping("/register/agency")
-    public ResponseEntity<User> registerAgency(@RequestBody @Valid RegisterRequest registerRequest){
+    public ResponseEntity<RegisterResponse> registerAgency(@RequestBody @Valid RegisterRequest registerRequest){
         return userService.registerAgency(registerRequest);
     }
 
@@ -64,11 +64,6 @@ public class UserController {
     public ResponseEntity<String> changePassword(@RequestBody @Valid ChangePasswordRequest
                                                              changePasswordRequest){
         return userService.changePassword(changePasswordRequest);
-    }
-
-    @GetMapping("/{id}")
-    public User get(@PathVariable Long id) {
-        return userService.getUserById(id);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
