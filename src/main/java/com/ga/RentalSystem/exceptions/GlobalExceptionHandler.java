@@ -2,13 +2,18 @@ package com.ga.RentalSystem.exceptions;
 
 import com.ga.RentalSystem.dto.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 import java.time.LocalDateTime;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -43,6 +48,29 @@ public class GlobalExceptionHandler {
         return build("You do not have permission to perform this action", HttpStatus.FORBIDDEN, request);
     }
 
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleBodyValidation(MethodArgumentNotValidException ex,
+                                                              HttpServletRequest request) {
+        String message = "";
+
+        for (FieldError error : ex.getBindingResult().getFieldErrors()) {
+            message = message + error.getField() + ": " + error.getDefaultMessage() + ". ";
+        }
+
+        return build(message.trim(), HttpStatus.BAD_REQUEST, request);
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ErrorResponse> handleParamValidation(HandlerMethodValidationException ex,
+                                                               HttpServletRequest request) {
+        String message = "";
+
+        for (MessageSourceResolvable error : ex.getAllErrors()) {
+            message = message + error.getDefaultMessage() + ". ";
+        }
+
+        return build(message.trim(), HttpStatus.BAD_REQUEST, request);
+    }
     private ResponseEntity<ErrorResponse> build(String message, HttpStatus status, HttpServletRequest request) {
         String errorCode = status.name();
 

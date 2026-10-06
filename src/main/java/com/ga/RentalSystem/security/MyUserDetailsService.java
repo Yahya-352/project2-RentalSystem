@@ -1,7 +1,6 @@
 package com.ga.RentalSystem.security;
 
 import com.ga.RentalSystem.model.User;
-import com.ga.RentalSystem.security.MyUserDetails;
 import com.ga.RentalSystem.service.UserService;
 import lombok.AllArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;

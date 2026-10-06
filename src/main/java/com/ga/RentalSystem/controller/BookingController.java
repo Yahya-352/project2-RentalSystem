@@ -3,6 +3,7 @@ package com.ga.RentalSystem.controller;
 import com.ga.RentalSystem.dto.request.BookingRequest;
 import com.ga.RentalSystem.dto.response.BookingResponse;
 import com.ga.RentalSystem.service.BookingService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,7 +20,7 @@ public class BookingController {
 
     @PostMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    public BookingResponse createBooking(@RequestBody BookingRequest request,
+    public BookingResponse createBooking(@RequestBody @Valid BookingRequest request,
                                                          Authentication authentication) {
         BookingResponse response = bookingService.createBooking(request, authentication);
         return response;
