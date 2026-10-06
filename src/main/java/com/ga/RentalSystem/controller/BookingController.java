@@ -2,9 +2,12 @@ package com.ga.RentalSystem.controller;
 
 import com.ga.RentalSystem.dto.request.BookingRequest;
 import com.ga.RentalSystem.dto.response.BookingResponse;
+import com.ga.RentalSystem.dto.response.PageResponse;
 import com.ga.RentalSystem.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -62,7 +65,7 @@ public class BookingController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public List<BookingResponse> getAllBookings(Authentication authentication) {
-        return bookingService.getAllBookings(authentication);
+    public PageResponse<BookingResponse> getAllBookings(Authentication authentication , @PageableDefault(size = 10) Pageable pageable) {
+        return bookingService.getAllBookings(authentication , pageable);
     }
 }

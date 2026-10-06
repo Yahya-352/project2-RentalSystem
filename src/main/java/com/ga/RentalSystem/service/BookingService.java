@@ -2,6 +2,7 @@ package com.ga.RentalSystem.service;
 
 import com.ga.RentalSystem.dto.request.BookingRequest;
 import com.ga.RentalSystem.dto.response.BookingResponse;
+import com.ga.RentalSystem.dto.response.PageResponse;
 import com.ga.RentalSystem.enums.BookingStatus;
 import com.ga.RentalSystem.enums.Role;
 import com.ga.RentalSystem.exceptions.BadRequestException;
@@ -17,6 +18,8 @@ import com.ga.RentalSystem.repository.CarRepository;
 import com.ga.RentalSystem.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -193,13 +196,14 @@ public class BookingService {
                 .orElseThrow(() -> new InformationNotFoundException("User not found"));
     }
 
-    public List<BookingResponse> getAllBookings(Authentication authentication) {
+    public PageResponse<BookingResponse> getAllBookings(Authentication authentication , Pageable pageable) {
         User currentUser = getCurrentUser(authentication);
         if (currentUser.getRoleEnum() != Role.ADMIN) {
             throw new ForbiddenException("Admin access required");
         }
-        List<Booking> bookings = bookingRepository.findAll();
-        return bookings.stream().map(booking -> toResponse(booking)).toList();
+        Page<Booking> bookings = bookingRepository.findAll(pageable);
+        Page<BookingResponse> responsePage = bookings.map(booking -> toResponse(booking));
+        return PageResponse.from(responsePage);
     }
 
     private BookingResponse toResponse(Booking booking) {
