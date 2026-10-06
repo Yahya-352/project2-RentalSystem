@@ -2,11 +2,14 @@ package com.ga.RentalSystem.controller;
 
 import com.ga.RentalSystem.dto.request.CarRequest;
 import com.ga.RentalSystem.dto.response.CarResponse;
+import com.ga.RentalSystem.dto.response.PageResponse;
 import com.ga.RentalSystem.model.Car;
 import com.ga.RentalSystem.service.CarService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -28,8 +31,8 @@ public class CarController {
     }
 
     @GetMapping("/")
-    public List<CarResponse> getCars(){
-        return carService.getCars();
+    public PageResponse<CarResponse> getCars(@PageableDefault(size = 10) Pageable pageable){
+        return carService.getCars(pageable);
     }
 
     @GetMapping("/{id}")

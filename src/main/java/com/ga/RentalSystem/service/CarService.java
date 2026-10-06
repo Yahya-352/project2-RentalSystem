@@ -2,6 +2,7 @@ package com.ga.RentalSystem.service;
 
 import com.ga.RentalSystem.dto.request.CarRequest;
 import com.ga.RentalSystem.dto.response.CarResponse;
+import com.ga.RentalSystem.dto.response.PageResponse;
 import com.ga.RentalSystem.enums.FuelType;
 import com.ga.RentalSystem.enums.TransmissionType;
 import com.ga.RentalSystem.exceptions.BadRequestException;
@@ -13,11 +14,13 @@ import com.ga.RentalSystem.repository.CarRepository;
 import com.ga.RentalSystem.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 @Slf4j
@@ -73,9 +76,10 @@ public class CarService {
     }
 
     //get all cars method
-    public List<CarResponse> getCars(){
-        List<Car> cars =  carRepository.findByDeletedFalse();
-        return cars.stream().map(car ->toCarResponse(car)).toList();
+    public PageResponse<CarResponse> getCars(Pageable pageable){
+        Page<Car> carPage =  carRepository.findByDeletedFalse(pageable);
+        Page<CarResponse> responsePage = carPage.map(car -> toCarResponse(car));
+        return PageResponse.from(responsePage);
     }
 
     //get car by id method for 1 car retrieval
