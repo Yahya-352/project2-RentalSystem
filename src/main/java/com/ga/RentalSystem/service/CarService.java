@@ -8,14 +8,8 @@ import com.ga.RentalSystem.enums.TransmissionType;
 import com.ga.RentalSystem.exceptions.BadRequestException;
 import com.ga.RentalSystem.exceptions.ForbiddenException;
 import com.ga.RentalSystem.exceptions.InformationNotFoundException;
-import com.ga.RentalSystem.model.Car;
-import com.ga.RentalSystem.model.Category;
-import com.ga.RentalSystem.model.Make;
-import com.ga.RentalSystem.model.User;
-import com.ga.RentalSystem.repository.CarRepository;
-import com.ga.RentalSystem.repository.CategoryRepository;
-import com.ga.RentalSystem.repository.MakeRepository;
-import com.ga.RentalSystem.repository.UserRepository;
+import com.ga.RentalSystem.model.*;
+import com.ga.RentalSystem.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -25,7 +19,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 
@@ -38,6 +39,8 @@ public class CarService {
     private final AuditLogService auditLogService;
     private final CategoryRepository categoryRepository;
     private final MakeRepository makeRepository;
+
+    private final ImageRepository imageRepository;
     //car creation method , user is required to submit car request dto and method
     // retrieves user email
     public ResponseEntity<CarResponse> createCar(CarRequest carRequest ,
@@ -212,5 +215,68 @@ public class CarService {
                 car.getCreatedAt(),
                 car.getUpdatedAt()
         );
+    }
+    public void uploadImage(Long id, MultipartFile file, Authentication authentication) {
+        User currentUser = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new InformationNotFoundException("User not found"));
+
+        Car car = carRepository.findById(id)
+                .orElseThrow(() -> new InformationNotFoundException("Car not found"));
+
+        if (!car.getOwner().getId().equals(currentUser.getId())) {
+            throw new ForbiddenException("You do not own this car");
+        }
+
+        String fileName = saveFile(file);
+
+        Image image = new Image();
+        image.setFileName(fileName);
+        image.setCar(car);
+        imageRepository.save(image);
+    }
+    private final Path rootLocation = Paths.get("uploads/cars").toAbsolutePath().normalize();
+    private String saveFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("Failed to store empty file");
+        }
+
+        try {
+            byte[] bytes = file.getBytes();
+
+            boolean isJpg = bytes.length > 3
+                    && bytes[0] == (byte) 0xFF
+                    && bytes[1] == (byte) 0xD8
+                    && bytes[2] == (byte) 0xFF;
+
+            boolean isPng = bytes.length > 4
+                    && bytes[0] == (byte) 0x89
+                    && bytes[1] == 0x50
+                    && bytes[2] == 0x4E
+                    && bytes[3] == 0x47;
+
+            String extension;
+            if (isJpg) {
+                extension = ".jpg";
+            } else if (isPng) {
+                extension = ".png";
+            } else {
+                throw new BadRequestException("Only JPG and PNG images are allowed");
+            }
+
+            Files.createDirectories(rootLocation);
+
+            String uniqueFileName = UUID.randomUUID() + extension;
+            Path destinationFile = rootLocation.resolve(uniqueFileName).normalize().toAbsolutePath();
+
+            if (!destinationFile.getParent().equals(rootLocation)) {
+                throw new BadRequestException("Cannot store file outside current directory");
+            }
+
+            Files.write(destinationFile, bytes);
+            return uniqueFileName;
+
+        } catch (IOException e) {
+            throw new BadRequestException("Failed to store file");
+        }
     }
 }

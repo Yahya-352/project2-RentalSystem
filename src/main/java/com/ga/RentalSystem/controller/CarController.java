@@ -10,10 +10,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -61,6 +64,15 @@ public class CarController {
     @DeleteMapping("/delete/{id}")
     public void deleteCar(@PathVariable Long id , Authentication authentication){
         carService.deleteCar(id , authentication);
+    }
+
+    @PreAuthorize("hasRole('AGENCY')")
+    @PostMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> uploadImage(@PathVariable Long id,
+                                            @RequestParam("file") MultipartFile file,
+                                            Authentication authentication) {
+        carService.uploadImage(id, file, authentication);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
 }
