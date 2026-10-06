@@ -10,9 +10,7 @@ import com.ga.RentalSystem.dto.response.LoginResponse;
 import com.ga.RentalSystem.dto.response.RegisterResponse;
 import com.ga.RentalSystem.enums.Role;
 import com.ga.RentalSystem.enums.UserStatus;
-import com.ga.RentalSystem.exceptions.BadRequestException;
-import com.ga.RentalSystem.exceptions.ConflictException;
-import com.ga.RentalSystem.exceptions.InformationNotFoundException;
+import com.ga.RentalSystem.exceptions.*;
 import com.ga.RentalSystem.model.User;
 import com.ga.RentalSystem.repository.UserRepository;
 import com.ga.RentalSystem.security.JWTUtils;
@@ -21,8 +19,7 @@ import com.ga.RentalSystem.security.MyUserDetails;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
@@ -67,17 +64,17 @@ public class UserService {
         this.auditLogService = auditLogService;
     }
 
-    public ResponseEntity<RegisterResponse> registerCustomer(RegisterRequest request) {
+    public RegisterResponse registerCustomer(RegisterRequest request) {
         return createUser(request, Role.CUSTOMER);
     }
 
-    public ResponseEntity<RegisterResponse> registerAgency(RegisterRequest request) {
+    public RegisterResponse registerAgency(RegisterRequest request) {
         return createUser(request, Role.AGENCY);
     }
 
-    public ResponseEntity<RegisterResponse> createUser(RegisterRequest request , Role role){
+    public RegisterResponse createUser(RegisterRequest request , Role role){
         if(userRepository.findByEmail(request.email()).isPresent()){
-            throw new ConflictException("Email Already Registered");
+            throw new ConflictException("Email Already Registered"); //409 - conflict
         }
         User user = new User();
         user.setUserName(request.userName());
@@ -112,10 +109,10 @@ public class UserService {
                 createdUser.getUserStatus().name(),
                 "Registration successful. Please check your email to verify your account."
         );
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return response;
     }
 
-    public ResponseEntity<String> verify(String token){
+    public String verify(String token){
         User user = userRepository.findByVerificationToken(token)
                 .orElseThrow(() -> new InformationNotFoundException("Invalid token"));
 
@@ -131,10 +128,10 @@ public class UserService {
         log.info(message);
         auditLogService.log(user.getId(), "EMAIL_VERIFIED", "User", user.getId(), message);
 
-        return ResponseEntity.ok().body("Account verified!");
+        return "Account verified!";
     }
 
-    public ResponseEntity<String> resendVerification(String email){
+    public String resendVerification(String email){
         User user = userRepository.findByEmail(email).
                 orElseThrow(() -> new InformationNotFoundException("No User Found with that email"));
 
@@ -150,10 +147,10 @@ public class UserService {
         emailService.sendEmail(user.getEmail(), "Verify your account",
                 "Click to verify: " + link);
 
-        return ResponseEntity.ok().body("Email Sent Successfully");
+        return "Email Sent Successfully";
     }
 
-    public ResponseEntity<String> passwordVerification(String email){
+    public String passwordVerification(String email){
         //check if user exists
         User user = userRepository.findByEmail(email).
                 orElseThrow(() -> new InformationNotFoundException
@@ -173,10 +170,10 @@ public class UserService {
         emailService.sendEmail(user.getEmail(), "Recover your password",
                 "Click to reset your password: " + link);
 
-        return ResponseEntity.ok().body("Email Sent Successfully");
+        return "Email Sent Successfully";
     }
 
-    public ResponseEntity<String> resetPassword(ResetPasswordToken resetPasswordToken){
+    public String resetPassword(ResetPasswordToken resetPasswordToken){
         //check if token is real
         User user = userRepository.findByPasswordRecoveryToken(resetPasswordToken.token())
                 .orElseThrow(() -> new BadRequestException("Invalid token"));
@@ -198,11 +195,10 @@ public class UserService {
         log.info(message);
         auditLogService.log(user.getId(), "PASSWORD_RESET", "User", user.getId(), message);
 
-
-        return ResponseEntity.ok().body("Password Updated");
+        return "Password Updated";
     }
 
-    public ResponseEntity<?> loginUser(LoginRequest loginRequest){
+    public LoginResponse loginUser(LoginRequest loginRequest){
         try{
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -215,39 +211,33 @@ public class UserService {
             final String jwt = jwtUtils.generateJwtToken(myUserDetails);
 
             if (!myUserDetails.getUser().isVerified()) {
-                return ResponseEntity.status(403)
-                        .body("Please verify your email before logging in");
+                throw new ForbiddenException("Please verify your email before logging in");
             }
 
-            return ResponseEntity.ok(new LoginResponse(jwt ,
+            return new LoginResponse(jwt ,
                     myUserDetails.getUsername(),
-                    myUserDetails.getUser().getRoleEnum().name()));
+                    myUserDetails.getUser().getRoleEnum().name());
 
         } catch (LockedException lockedException){
         log.warn("Login blocked for unapproved agency {}", loginRequest.email());
-        return ResponseEntity.status(403)
-                .body("Your agency account is waiting for admin approval");
+        throw new ForbiddenException("Your agency account is waiting for admin approval");
         }
         catch (DisabledException disabledException){
         log.warn("Login blocked for deactivated account {}", loginRequest.email());
-        return ResponseEntity.status(403)
-                .body("Your account has been deactivated");
+        throw new ForbiddenException("Your account has been deactivated");
         }
-
         catch (AuthenticationException authenticationException){
-            return ResponseEntity.status(401)
-                    .body("Invalid email or password");
+            throw new NotAuthorizedException("Invalid email or password");
         }
-
     }
 
-    public ResponseEntity<String> changePassword(ChangePasswordRequest changePasswordRequest){
+    public String changePassword(ChangePasswordRequest changePasswordRequest){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         MyUserDetails myUserDetails = (MyUserDetails) authentication.getPrincipal();
         User user = myUserDetails.getUser();
 
         if(!passwordEncoder.matches(changePasswordRequest.oldPassword() , user.getPassword())){
-            return ResponseEntity.status(400).body("Current Password is incorrect");
+            throw new BadRequestException("Current Password is incorrect");
         }
         user.setPassword(passwordEncoder.encode(changePasswordRequest.newPassword()));
         userRepository.save(user);
@@ -256,7 +246,7 @@ public class UserService {
         log.info(message);
         auditLogService.log(user.getId(), "PASSWORD_CHANGED", "User", user.getId(), message);
 
-        return ResponseEntity.ok("Password changed succesfully");
+        return "Password changed successfully";
     }
 
     public User findUserByEmailAddress(String email){
