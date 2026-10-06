@@ -13,8 +13,7 @@ import com.ga.RentalSystem.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -43,7 +42,8 @@ public class CarService {
     private final ImageRepository imageRepository;
     //car creation method , user is required to submit car request dto and method
     // retrieves user email
-    public ResponseEntity<CarResponse> createCar(CarRequest carRequest ,
+
+    public CarResponse createCar(CarRequest carRequest ,
                                                    Authentication authentication){
         User owner = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new InformationNotFoundException("User not found"));
@@ -82,9 +82,7 @@ public class CarService {
         log.info(message);
         auditLogService.log(owner.getId(), "CAR_CREATED", "Car", createdCar.getId(), message);
 
-        CarResponse carResponse = toCarResponse(createdCar);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(carResponse);
+        return toCarResponse(createdCar);
     }
 
     //get all cars method
@@ -194,8 +192,6 @@ public class CarService {
         auditLogService.log(currentUser.getId(), "CAR_DELETED", "Car", car.getId(), message);
     }
 
-
-
     //template to reduce code as we will need to return car response on every method
     private CarResponse toCarResponse(Car car) {
         return new CarResponse(
@@ -225,6 +221,9 @@ public class CarService {
 
         if (!car.getOwner().getId().equals(currentUser.getId())) {
             throw new ForbiddenException("You do not own this car");
+        }
+        if (car.isDeleted()) {
+            throw new InformationNotFoundException("Car not found");
         }
 
         String fileName = saveFile(file);

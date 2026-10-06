@@ -3,11 +3,9 @@ package com.ga.RentalSystem.controller;
 import com.ga.RentalSystem.dto.request.CarRequest;
 import com.ga.RentalSystem.dto.response.CarResponse;
 import com.ga.RentalSystem.dto.response.PageResponse;
-import com.ga.RentalSystem.model.Car;
 import com.ga.RentalSystem.service.CarService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.Value;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -30,7 +28,8 @@ public class CarController {
     @PostMapping("/create")
     public ResponseEntity<CarResponse> createCar(@RequestBody @Valid CarRequest carRequest ,
                                                  Authentication authentication){
-        return carService.createCar(carRequest , authentication);
+        CarResponse response = carService.createCar(carRequest, authentication);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/")
@@ -61,6 +60,7 @@ public class CarController {
     }
 
     @PreAuthorize("hasRole('AGENCY')")
+    @ResponseStatus(HttpStatus.NO_CONTENT) // 204
     @DeleteMapping("/delete/{id}")
     public void deleteCar(@PathVariable Long id , Authentication authentication){
         carService.deleteCar(id , authentication);
