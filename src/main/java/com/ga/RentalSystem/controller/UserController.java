@@ -77,4 +77,6 @@ public class UserController {
     public void activateUser(@PathVariable Long id, Authentication authentication) {
         userService.activateUser(id, authentication);
     }
+
+
 }
