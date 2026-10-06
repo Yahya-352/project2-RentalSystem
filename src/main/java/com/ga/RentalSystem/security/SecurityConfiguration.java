@@ -44,7 +44,10 @@ public class SecurityConfiguration {
                                 "/users/register/agency",
                                 "/users/resend-verification",
                                 "/users/forgot-password",
-                                "/users/reset-password"
+                                "/users/reset-password",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**"
                         ).permitAll().anyRequest().authenticated());
         http.addFilterBefore(authenticationJwtTokenFilter() ,
                 UsernamePasswordAuthenticationFilter.class);

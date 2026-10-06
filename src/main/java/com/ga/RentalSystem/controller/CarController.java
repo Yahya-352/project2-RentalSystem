@@ -4,6 +4,8 @@ import com.ga.RentalSystem.dto.request.CarRequest;
 import com.ga.RentalSystem.dto.response.CarResponse;
 import com.ga.RentalSystem.dto.response.PageResponse;
 import com.ga.RentalSystem.service.CarService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -18,11 +20,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
+@Tag(name = "Cars", description = "Create, browse, update and delete car listings")
 @RestController
 @RequestMapping("/cars")
 @RequiredArgsConstructor
 public class CarController {
     private final CarService carService;
+
+    @Operation(summary = "Create a car listing (agency only)")
 
     @PreAuthorize("hasRole('AGENCY')")
     @PostMapping("/create")
@@ -32,6 +37,7 @@ public class CarController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @Operation(summary = "List available cars (filter by location, category or make)")
     @GetMapping("/")
     public PageResponse<CarResponse> getCars(@RequestParam(required = false) String location,
                                              @RequestParam(required = false) String category,
@@ -40,17 +46,20 @@ public class CarController {
         return carService.getCars(location, category, make, pageable);
     }
 
+    @Operation(summary = "get a Car By its id")
     @GetMapping("/{id}")
     public CarResponse getCarById(@PathVariable Long id) {
         return carService.getCarById(id);
     }
 
+    @Operation(summary = "View your own cars (owner(agency) of cars only)")
     @PreAuthorize("hasRole('AGENCY')")
     @GetMapping("/my-cars")
     public List<CarResponse> getMyCars(Authentication authentication) {
         return carService.getMyCars(authentication);
     }
 
+    @Operation(summary = "update a car listing (Owner(Agency) of cars only)")
     @PreAuthorize("hasRole('AGENCY')")
     @PutMapping("/update/{id}")
     public CarResponse updateCar(@PathVariable Long id,
@@ -59,6 +68,7 @@ public class CarController {
         return carService.updateCar(id, carRequest, authentication);
     }
 
+    @Operation(summary = "delete a car listing (Owner(agency) of cars only)")
     @PreAuthorize("hasRole('AGENCY')")
     @ResponseStatus(HttpStatus.NO_CONTENT) // 204
     @DeleteMapping("/delete/{id}")
@@ -66,6 +76,7 @@ public class CarController {
         carService.deleteCar(id , authentication);
     }
 
+    @Operation(summary = "Upload image of cars (agency only)")
     @PreAuthorize("hasRole('AGENCY')")
     @PostMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> uploadImage(@PathVariable Long id,
