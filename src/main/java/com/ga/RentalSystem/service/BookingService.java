@@ -196,12 +196,27 @@ public class BookingService {
                 .orElseThrow(() -> new InformationNotFoundException("User not found"));
     }
 
-    public PageResponse<BookingResponse> getAllBookings(Authentication authentication , Pageable pageable) {
+    public PageResponse<BookingResponse> getAllBookings(Authentication authentication ,
+                                                        String status , Pageable pageable) {
         User currentUser = getCurrentUser(authentication);
         if (currentUser.getRoleEnum() != Role.ADMIN) {
             throw new ForbiddenException("Admin access required");
         }
-        Page<Booking> bookings = bookingRepository.findAll(pageable);
+
+        Page<Booking> bookings;
+
+        if (status != null) {
+            BookingStatus bookingStatus;
+            try {
+                bookingStatus = BookingStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new BadRequestException("Invalid booking status: " + status);
+            }
+            bookings = bookingRepository.findByStatus(bookingStatus, pageable);
+        } else {
+            bookings = bookingRepository.findAll(pageable);
+        }
+
         Page<BookingResponse> responsePage = bookings.map(booking -> toResponse(booking));
         return PageResponse.from(responsePage);
     }
@@ -210,7 +225,7 @@ public class BookingService {
         return new BookingResponse(
                 booking.getId(),
                 booking.getCar().getId(),
-                booking.getCar().getMake(),
+                booking.getCar().getMake().getName(),
                 booking.getCar().getModel(),
                 booking.getRenter().getId(),
                 booking.getStartDate(),

@@ -9,8 +9,12 @@ import com.ga.RentalSystem.exceptions.BadRequestException;
 import com.ga.RentalSystem.exceptions.ForbiddenException;
 import com.ga.RentalSystem.exceptions.InformationNotFoundException;
 import com.ga.RentalSystem.model.Car;
+import com.ga.RentalSystem.model.Category;
+import com.ga.RentalSystem.model.Make;
 import com.ga.RentalSystem.model.User;
 import com.ga.RentalSystem.repository.CarRepository;
+import com.ga.RentalSystem.repository.CategoryRepository;
+import com.ga.RentalSystem.repository.MakeRepository;
 import com.ga.RentalSystem.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +36,8 @@ public class CarService {
     private final UserRepository userRepository;
 
     private final AuditLogService auditLogService;
-
+    private final CategoryRepository categoryRepository;
+    private final MakeRepository makeRepository;
     //car creation method , user is required to submit car request dto and method
     // retrieves user email
     public ResponseEntity<CarResponse> createCar(CarRequest carRequest ,
@@ -41,9 +46,13 @@ public class CarService {
                 .orElseThrow(() -> new InformationNotFoundException("User not found"));
 
         Car car = new Car();
-        car.setMake(carRequest.make());
+        Make make = makeRepository.findById(carRequest.makeId())
+                .orElseThrow(() -> new InformationNotFoundException("Make not found"));
+        car.setMake(make);
         car.setModel(carRequest.model());
-        car.setCategory(carRequest.category());
+        Category category = categoryRepository.findById(carRequest.categoryId())
+                .orElseThrow(() -> new InformationNotFoundException("Category not found"));
+        car.setCategory(category);
         car.setLocation(carRequest.location());
         car.setYear(carRequest.year());
         car.setLicensePlate(carRequest.licensePlate());
@@ -76,8 +85,19 @@ public class CarService {
     }
 
     //get all cars method
-    public PageResponse<CarResponse> getCars(Pageable pageable){
-        Page<Car> carPage =  carRepository.findByDeletedFalse(pageable);
+    public PageResponse<CarResponse> getCars(String location, String category, String make, Pageable pageable) {
+        Page<Car> carPage;
+
+        if (location != null) {
+            carPage = carRepository.findByDeletedFalseAndLocationIgnoreCase(location, pageable);
+        } else if (category != null) {
+            carPage = carRepository.findByDeletedFalseAndCategoryNameIgnoreCase(category, pageable);
+        } else if (make != null) {
+            carPage = carRepository.findByDeletedFalseAndMakeNameIgnoreCase(make, pageable);
+        } else {
+            carPage = carRepository.findByDeletedFalse(pageable);
+        }
+
         Page<CarResponse> responsePage = carPage.map(car -> toCarResponse(car));
         return PageResponse.from(responsePage);
     }
@@ -115,9 +135,13 @@ public class CarService {
             throw new ForbiddenException("You do not own this car");
         }
 
-        car.setMake(carRequest.make());
+        Make make = makeRepository.findById(carRequest.makeId())
+                .orElseThrow(() -> new InformationNotFoundException("Make not found"));
+        car.setMake(make);
         car.setModel(carRequest.model());
-        car.setCategory(carRequest.category());
+        Category category = categoryRepository.findById(carRequest.categoryId())
+                .orElseThrow(() -> new InformationNotFoundException("Category not found"));
+        car.setCategory(category);
         car.setLocation(carRequest.location());
         car.setYear(carRequest.year());
         car.setLicensePlate(carRequest.licensePlate());
@@ -173,9 +197,9 @@ public class CarService {
     private CarResponse toCarResponse(Car car) {
         return new CarResponse(
                 car.getId(),
-                car.getMake(),
+                car.getMake().getName(),
                 car.getModel(),
-                car.getCategory(),
+                car.getCategory().getName(),
                 car.getLocation(),
                 car.getYear(),
                 car.getLicensePlate(),

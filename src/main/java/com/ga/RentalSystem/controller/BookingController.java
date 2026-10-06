@@ -65,7 +65,9 @@ public class BookingController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public PageResponse<BookingResponse> getAllBookings(Authentication authentication , @PageableDefault(size = 10) Pageable pageable) {
-        return bookingService.getAllBookings(authentication , pageable);
+    public PageResponse<BookingResponse> getAllBookings(Authentication authentication,
+                                                        @RequestParam(required = false) String status,
+                                                        @PageableDefault(size = 10) Pageable pageable) {
+        return bookingService.getAllBookings(authentication, status, pageable);
     }
 }

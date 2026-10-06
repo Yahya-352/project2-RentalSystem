@@ -18,9 +18,16 @@ public class Car {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String make;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "make_id", nullable = false)
+    private Make make;
+
     private String model;
-    private String category;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
+
     private String location;
 
     @ManyToOne(fetch = FetchType.LAZY)

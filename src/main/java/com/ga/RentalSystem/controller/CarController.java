@@ -31,8 +31,11 @@ public class CarController {
     }
 
     @GetMapping("/")
-    public PageResponse<CarResponse> getCars(@PageableDefault(size = 10) Pageable pageable){
-        return carService.getCars(pageable);
+    public PageResponse<CarResponse> getCars(@RequestParam(required = false) String location,
+                                             @RequestParam(required = false) String category,
+                                             @RequestParam(required = false) String make,
+                                             @PageableDefault(size = 10) Pageable pageable) {
+        return carService.getCars(location, category, make, pageable);
     }
 
     @GetMapping("/{id}")

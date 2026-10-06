@@ -5,12 +5,12 @@ import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 
 public record CarRequest(
-        @NotBlank(message = "Make is required")
-        String make,
+        @NotNull(message = "Make id is required")
+        Long makeId,
         @NotBlank(message = "Model is required")
         String model,
-        @NotBlank(message = "category is required")
-        String category,
+        @NotNull(message = "Category id is required")
+        Long categoryId,
         @NotBlank(message = "location is required")
         String location,
         @Min(value = 1980, message = "Year must be 1980 or later")
