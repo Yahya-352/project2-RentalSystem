@@ -4,7 +4,7 @@ import com.ga.RentalSystem.dto.request.BookingRequest;
 import com.ga.RentalSystem.dto.response.BookingResponse;
 import com.ga.RentalSystem.dto.response.PageResponse;
 import com.ga.RentalSystem.enums.BookingStatus;
-import com.ga.RentalSystem.enums.Role;
+
 import com.ga.RentalSystem.exceptions.BadRequestException;
 import com.ga.RentalSystem.exceptions.ConflictException;
 import com.ga.RentalSystem.exceptions.ForbiddenException;
@@ -12,7 +12,6 @@ import com.ga.RentalSystem.exceptions.InformationNotFoundException;
 import com.ga.RentalSystem.model.Booking;
 import com.ga.RentalSystem.model.Car;
 import com.ga.RentalSystem.model.User;
-import com.ga.RentalSystem.repository.AuditLogRepository;
 import com.ga.RentalSystem.repository.BookingRepository;
 import com.ga.RentalSystem.repository.CarRepository;
 import com.ga.RentalSystem.repository.UserRepository;
@@ -20,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -199,9 +197,6 @@ public class BookingService {
     public PageResponse<BookingResponse> getAllBookings(Authentication authentication ,
                                                         String status , Pageable pageable) {
         User currentUser = getCurrentUser(authentication);
-        if (currentUser.getRoleEnum() != Role.ADMIN) {
-            throw new ForbiddenException("Admin access required");
-        }
 
         Page<Booking> bookings;
 

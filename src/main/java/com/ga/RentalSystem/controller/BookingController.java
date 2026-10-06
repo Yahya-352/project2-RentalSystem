@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -23,10 +24,10 @@ public class BookingController {
 
     @PostMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    public BookingResponse createBooking(@RequestBody @Valid BookingRequest request,
+    public ResponseEntity<BookingResponse> createBooking(@RequestBody @Valid BookingRequest request,
                                                          Authentication authentication) {
         BookingResponse response = bookingService.createBooking(request, authentication);
-        return response;
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/me")
