@@ -80,9 +80,9 @@ public class CarController {
     @PreAuthorize("hasRole('AGENCY')")
     @PostMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> uploadImage(@PathVariable Long id,
-                                            @RequestParam("file") MultipartFile file,
+                                            @RequestParam("file") List<MultipartFile> files,
                                             Authentication authentication) {
-        carService.uploadImage(id, file, authentication);
+        carService.uploadImage(id, files, authentication);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

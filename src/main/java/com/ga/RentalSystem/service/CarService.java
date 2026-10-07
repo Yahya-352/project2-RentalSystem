@@ -274,7 +274,8 @@ public class CarService {
                 car.isAvailable(),
                 car.getOwner().getUserName(),
                 car.getCreatedAt(),
-                car.getUpdatedAt()
+                car.getUpdatedAt(),
+                imageRepository.findByCarId(car.getId()).stream().map(image -> image.getId()).toList()
         );
     }
 
@@ -284,7 +285,7 @@ public class CarService {
      * name is linked to the car in the images table.
      *
      * @param id             the id of the car
-     * @param file           the image file (JPG or PNG)
+     * @param files           the images of cars (JPG or PNG)
      * @param authentication the logged-in user, who must be the owner
      * @throws InformationNotFoundException if the user or car does not exist, or the car
      *                                      has been deleted
@@ -292,12 +293,16 @@ public class CarService {
      * @throws BadRequestException          if the file is empty, is not a JPG or PNG, or
      *                                      cannot be stored
      */
-    public void uploadImage(Long id, MultipartFile file, Authentication authentication) {
+    public void uploadImage(Long id, List<MultipartFile> files, Authentication authentication) {
         User currentUser = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new InformationNotFoundException("User not found"));
 
         Car car = carRepository.findById(id)
                 .orElseThrow(() -> new InformationNotFoundException("Car not found"));
+
+        if (files == null || files.isEmpty()) {
+            throw new BadRequestException("No files uploaded");
+        }
 
         if (!car.getOwner().getId().equals(currentUser.getId())) {
             throw new ForbiddenException("You do not own this car");
@@ -305,13 +310,14 @@ public class CarService {
         if (car.isDeleted()) {
             throw new InformationNotFoundException("Car not found");
         }
+        for(MultipartFile file: files){
+            String fileName = saveFile(file);
 
-        String fileName = saveFile(file);
-
-        Image image = new Image();
-        image.setFileName(fileName);
-        image.setCar(car);
-        imageRepository.save(image);
+            Image image = new Image();
+            image.setFileName(fileName);
+            image.setCar(car);
+            imageRepository.save(image);
+        }
     }
 
     /** The folder where car images are stored. */

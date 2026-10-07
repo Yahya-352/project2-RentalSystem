@@ -4,11 +4,14 @@ import com.ga.RentalSystem.enums.FuelType;
 import com.ga.RentalSystem.enums.TransmissionType;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Entity
@@ -54,4 +57,6 @@ public class Car {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+
 }

@@ -48,6 +48,8 @@ public class UserProfileController {
         return userProfileService.updateProfile(request, authentication);
     }
 
+
+
     @Operation(summary = "Upload your profile picture, JPG or PNG (customer only)")
     @PreAuthorize("hasRole('CUSTOMER')")
     @PostMapping(value = "/picture", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -55,5 +57,14 @@ public class UserProfileController {
                                                      Authentication authentication) {
         userProfileService.uploadProfilePicture(file, authentication);
         return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @GetMapping("/picture")
+    @Operation(summary = "Get the agency logo")
+    public ResponseEntity<byte[]> getLogo(Authentication authentication) {
+        byte[] logo = userProfileService.getUserProfilePicture(authentication);
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_JPEG)
+                .body(logo);
     }
 }

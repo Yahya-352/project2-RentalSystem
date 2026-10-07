@@ -112,6 +112,27 @@ public class UserProfileService {
                 profile.getUpdatedAt()
         );
     }
+
+    public byte[] getUserProfilePicture(Authentication authentication){
+        User user = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new InformationNotFoundException("User not found"));
+
+        UserProfile profile = userProfileRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new InformationNotFoundException("Profile not found"));
+
+        if (profile.getProfilePictureUrl() == null) {
+            throw new InformationNotFoundException("No profile picture uploaded");
+        }
+
+        Path file = rootLocation.resolve(profile.getProfilePictureUrl()).normalize();
+
+        try {
+            return Files.readAllBytes(file);
+        } catch (IOException e) {
+            throw new InformationNotFoundException("Profile picture file not found");
+        }
+    }
+
     public void uploadProfilePicture(MultipartFile file, Authentication authentication) {
         User user = getCurrentUser(authentication);
 

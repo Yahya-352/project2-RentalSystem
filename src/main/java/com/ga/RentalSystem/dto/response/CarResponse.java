@@ -2,6 +2,7 @@ package com.ga.RentalSystem.dto.response;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record CarResponse(
         Long id,
@@ -18,5 +19,6 @@ public record CarResponse(
         boolean available,
         String ownerUsername,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        List<Long> imageIds
 ) {}

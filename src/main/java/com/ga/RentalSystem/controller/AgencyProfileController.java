@@ -7,10 +7,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @Tag(name = "Agency Profiles", description = "Create, view and update an agency profile")
 @RestController
@@ -44,5 +46,23 @@ public class AgencyProfileController {
             @RequestBody AgencyProfileRequest request,
             Authentication authentication) {
         return agencyProfileService.updateProfile(request, authentication);
+    }
+
+    @Operation(summary = "Upload your agency logo, JPG or PNG (agency only)")
+    @PreAuthorize("hasRole('AGENCY')")
+    @PostMapping(value = "/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> uploadLogo(@RequestParam("file") MultipartFile file,
+                                           Authentication authentication) {
+        agencyProfileService.uploadLogo(file, authentication);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @GetMapping("/logo")
+    @Operation(summary = "Get the agency logo")
+    public ResponseEntity<byte[]> getLogo(Authentication authentication) {
+        byte[] logo = agencyProfileService.getAgencyProfilePicture(authentication);
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_JPEG)
+                .body(logo);
     }
 }

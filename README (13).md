@@ -90,7 +90,7 @@ Renting a car usually means calling several agencies and checking availability b
 The application follows a standard layered architecture:
 
 ```
-Client (Postman / Swagger / frontend)
+Client (Postman / Swagger)
         |
         v
   Controller layer   - HTTP endpoints, request validation, status codes
@@ -193,7 +193,7 @@ git clone https://github.com/Yahya-352/project2-RentalSystem.git
 cd project2-RentalSystem
 ```
 
-You need **JDK 25**, **Maven** and **PostgreSQL** installed.
+You need **JDK 21 or newer** and **PostgreSQL** installed. Maven does not need to be installed: the project includes the Maven wrapper (`mvnw` / `mvnw.cmd`), which downloads the right Maven version on first use.
 
 ### 2. Configure the application
 
@@ -225,17 +225,29 @@ Secrets are not stored in the repository. Set these variables before starting th
 |---|---|
 | `DB_USERNAME` | Database user (defaults to `postgres`) |
 | `DB_PASSWORD` | Database password |
-| `JWT_SECRET` | Secret used to sign JWT tokens (use a long random string, at least 32 characters) |
+| `JWT_SECRET` | Secret used to sign JWT tokens. It **must be Base64** (letters, digits, `+`, `/`, `=`) and decode to at least 32 bytes. A plain string containing characters such as `-` makes every login fail. |
 | `SMTP_USERNAME` | Mail server username |
 | `SMTP_PASSWORD` | Mail server password |
 
 The mail settings point to a [Mailtrap](https://mailtrap.io) sandbox inbox. Create a free inbox there and copy its SMTP username and password. Verification and password recovery emails will appear in the Mailtrap inbox instead of being sent to real addresses.
 
+Generate a valid `JWT_SECRET` once and reuse it:
+
+```powershell
+# PowerShell
+[Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Maximum 256 }))
+```
+
+```bash
+# macOS / Linux
+openssl rand -base64 48
+```
+
 PowerShell:
 
 ```powershell
 $env:DB_PASSWORD = "your-db-password"
-$env:JWT_SECRET = "a-long-random-string-of-at-least-32-characters"
+$env:JWT_SECRET = "paste-the-generated-base64-secret"
 $env:SMTP_USERNAME = "your-mailtrap-username"
 $env:SMTP_PASSWORD = "your-mailtrap-password"
 ```
@@ -244,10 +256,12 @@ macOS / Linux:
 
 ```bash
 export DB_PASSWORD="your-db-password"
-export JWT_SECRET="a-long-random-string-of-at-least-32-characters"
+export JWT_SECRET="paste-the-generated-base64-secret"
 export SMTP_USERNAME="your-mailtrap-username"
 export SMTP_PASSWORD="your-mailtrap-password"
 ```
+
+Variables set this way only last for the current terminal window, so start the application from that same window.
 
 In IntelliJ IDEA, add them under **Run → Edit Configurations → Environment variables** instead.
 
@@ -258,6 +272,8 @@ Seeding runs automatically every time the application starts, and it only create
 - The admin account
 - The car categories and makes
 - One test customer and one test agency (both already verified and active)
+- Six sample cars owned by the test agency (license plates `SEED-001` to `SEED-006`)
+- Six sample bookings by the test customer, covering every booking status
 
 | Role | Email | Password |
 |---|---|---|
@@ -265,20 +281,24 @@ Seeding runs automatically every time the application starts, and it only create
 | Customer | `customer@rental.com` | `Test1234!` |
 | Agency | `agency@rental.com` | `Test1234!` |
 
-No cars are seeded. To get cars to browse and book, log in as the agency and create them with `POST /cars/create`.
-
 These accounts are for local testing only. You can change the values with `app.admin.email`, `app.admin.password` and `app.seed.password` in the profile file.
 
 ### 6. Start the application
 
+From the project folder:
+
 ```bash
-mvn spring-boot:run
+# Windows (PowerShell / CMD)
+.\mvnw.cmd spring-boot:run
+
+# macOS / Linux
+./mvnw spring-boot:run
 ```
 
 To pick a profile from the command line:
 
 ```bash
-mvn spring-boot:run -Dspring-boot.run.profiles=dev
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
 You can also run `RentalSystemApplication` from IntelliJ IDEA. The application starts on port 8080. An `uploads/` folder is created automatically the first time you upload an image.
@@ -312,7 +332,7 @@ Open `http://localhost:8080/swagger-ui/index.html` in your browser. See [API Doc
 ### Run the tests
 
 ```bash
-mvn test
+./mvnw test
 ```
 
 ---
@@ -344,7 +364,6 @@ mvn test
 
 - Rate limiting with Redis
 - Stripe for payments
-- Uploading several images in one request
 - Advanced search for cars based on dates
 - Docker and integration tests
 - JSON responses everywhere
