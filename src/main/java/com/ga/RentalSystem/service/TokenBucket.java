@@ -1,8 +1,6 @@
 package com.ga.RentalSystem.service;
 
 
-//reference:
-// https://medium.com/@AlexanderObregon/rate-limit-per-endpoint-in-spring-boot-apis-6f4f40da76a2
 class TokenBucket {
     private int capacity;
     private double refillRate; // tokens per second

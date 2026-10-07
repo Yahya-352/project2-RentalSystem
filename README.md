@@ -16,6 +16,7 @@ RentRide is a REST API for renting cars, where customers book cars, agencies lis
 10. [Unsolved Problems](#unsolved-problems)
 11. [Major Challenges](#major-challenges)
 12. [Future Improvements](#future-improvements)
+13. [External Resources](#external-resources)
 
 ---
 
@@ -151,7 +152,7 @@ For the major features, authentication uses JWT with Spring Security. Registrati
 
 The user stories are grouped by role (customer, agency, admin) and system quality, and each one lists the endpoint that implements it.
 
-[User stories](docs/user-stories.md)
+[User stories (Jira board)](https://yahya-altaraifi.atlassian.net/jira/core/projects/RR/board?filter=&groupBy=none)
 
 ---
 
@@ -382,3 +383,14 @@ Open `http://localhost:8080/swagger-ui/index.html` in your browser. See [API Doc
 - Docker and integration tests
 - JSON responses everywhere
 - Reviews and ratings
+
+---
+
+## External Resources
+
+**Server-Sent Events (real-time notifications)**
+- [Server-Sent Events video tutorial](https://www.youtube.com/watch?v=WM_J4tajQHM&t=148s)
+
+**Token bucket (rate limiting)**
+- [Rate Limit per Endpoint in Spring Boot APIs](https://medium.com/@AlexanderObregon/rate-limit-per-endpoint-in-spring-boot-apis-6f4f40da76a2) by Alexander Obregon
+- [Understanding the Token Bucket Algorithm for Rate Limiting](https://medium.com/@0xTanzim/understanding-the-token-bucket-algorithm-for-rate-limiting-fccdf80e27ca)
