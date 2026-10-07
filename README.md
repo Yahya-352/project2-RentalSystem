@@ -199,23 +199,27 @@ You need **JDK 21 or newer** and **PostgreSQL** installed. Maven does not need t
 
 The settings are in `src/main/resources`:
 
-| File | Purpose |
-|---|---|
-| `application.properties` | Chooses the active profile (`spring.profiles.active`) |
-| `application-dev.properties` | Local development: SQL logging and full error details |
-| `application-test.properties` | Production-style settings: no SQL logging and no stack traces in error responses |
+| File | Purpose | Database |
+|---|---|---|
+| `application.properties` | Chooses the active profile (`spring.profiles.active`, `dev` by default) | |
+| `application-dev.properties` | Local development: SQL logging and full error details | `RentalSystemSeeded` |
+| `application-test.properties` | Production-style settings: no SQL logging and no stack traces in error responses | `RentalSystem` |
 
 Choose the profile in `application.properties`, or override it with the `SPRING_PROFILES_ACTIVE` environment variable.
 
 ### 3. Configure PostgreSQL
 
-Create an empty database. The name is case-sensitive, so keep the quotes:
+Create an empty database for the profile you use. The name is case-sensitive, so keep the quotes:
 
 ```sql
+-- dev profile (the default)
+CREATE DATABASE "RentalSystemSeeded";
+
+-- test profile
 CREATE DATABASE "RentalSystem";
 ```
 
-The application connects to `jdbc:postgresql://localhost:5432/RentalSystem`. The tables are created automatically on the first start (`spring.jpa.hibernate.ddl-auto=update`), so you don't need to run any SQL scripts. If your PostgreSQL runs on another host or port, change `spring.datasource.url` in the profile file you use.
+The `dev` profile connects to `jdbc:postgresql://localhost:5432/RentalSystemSeeded` and the `test` profile to `jdbc:postgresql://localhost:5432/RentalSystem`. The tables are created automatically on the first start (`spring.jpa.hibernate.ddl-auto=update`), so you don't need to run any SQL scripts. If your PostgreSQL runs on another host or port, change `spring.datasource.url` in the profile file you use.
 
 ### 4. Configure environment variables
 
@@ -228,6 +232,10 @@ Secrets are not stored in the repository. Set these variables before starting th
 | `JWT_SECRET` | Secret used to sign JWT tokens. It **must be Base64** (letters, digits, `+`, `/`, `=`) and decode to at least 32 bytes. A plain string containing characters such as `-` makes every login fail. |
 | `SMTP_USERNAME` | Mail server username |
 | `SMTP_PASSWORD` | Mail server password |
+| `ADMIN_USERNAME` | Email address of the admin account created on first start, for example `admin@rental.com` |
+| `ADMIN_PASSWORD` | Password of that admin account, for example `Admin123!` |
+
+All of these are required except `DB_USERNAME`. If `JWT_SECRET`, `ADMIN_USERNAME` or `ADMIN_PASSWORD` is missing, the application stops at startup with `Could not resolve placeholder '...'`. A missing `DB_PASSWORD` stops it with a database login error, and missing `SMTP_*` values only show up later, when registration or password-reset emails fail to send.
 
 The mail settings point to a [Mailtrap](https://mailtrap.io) sandbox inbox. Create a free inbox there and copy its SMTP username and password. Verification and password recovery emails will appear in the Mailtrap inbox instead of being sent to real addresses.
 
@@ -250,6 +258,8 @@ $env:DB_PASSWORD = "your-db-password"
 $env:JWT_SECRET = "paste-the-generated-base64-secret"
 $env:SMTP_USERNAME = "your-mailtrap-username"
 $env:SMTP_PASSWORD = "your-mailtrap-password"
+$env:ADMIN_USERNAME = "admin@rental.com"
+$env:ADMIN_PASSWORD = "Admin123!"
 ```
 
 macOS / Linux:
@@ -259,6 +269,8 @@ export DB_PASSWORD="your-db-password"
 export JWT_SECRET="paste-the-generated-base64-secret"
 export SMTP_USERNAME="your-mailtrap-username"
 export SMTP_PASSWORD="your-mailtrap-password"
+export ADMIN_USERNAME="admin@rental.com"
+export ADMIN_PASSWORD="Admin123!"
 ```
 
 Variables set this way only last for the current terminal window, so start the application from that same window.
@@ -269,7 +281,7 @@ In IntelliJ IDEA, add them under **Run → Edit Configurations → Environment v
 
 Seeding runs automatically every time the application starts, and it only creates data that is missing, so restarting does not create duplicates. It creates:
 
-- The admin account
+- The admin account, using `ADMIN_USERNAME` and `ADMIN_PASSWORD`
 - The car categories and makes
 - One test customer and one test agency (both already verified and active)
 - Six sample cars owned by the test agency (license plates `SEED-001` to `SEED-006`)
@@ -277,11 +289,13 @@ Seeding runs automatically every time the application starts, and it only create
 
 | Role | Email | Password |
 |---|---|---|
-| Admin | `admin@rental.com` | `Admin123!` |
+| Admin | the value of `ADMIN_USERNAME` (e.g. `admin@rental.com`) | the value of `ADMIN_PASSWORD` (e.g. `Admin123!`) |
 | Customer | `customer@rental.com` | `Test1234!` |
 | Agency | `agency@rental.com` | `Test1234!` |
 
-These accounts are for local testing only. You can change the values with `app.admin.email`, `app.admin.password` and `app.seed.password` in the profile file.
+These accounts are for local testing only. The customer and agency password comes from `app.seed.password` in the profile file.
+
+The seeder only creates accounts that don't exist yet. Changing `ADMIN_PASSWORD` or `app.seed.password` later does not change existing accounts, and changing `ADMIN_USERNAME` creates a second admin account next to the old one.
 
 ### 6. Start the application
 
