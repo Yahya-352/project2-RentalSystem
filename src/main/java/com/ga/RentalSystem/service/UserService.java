@@ -35,6 +35,14 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 
+/**
+ * Business logic for user accounts: registration, email verification, login, password
+ * recovery and password change, plus the admin actions to activate and deactivate users.
+ * <p>
+ * New users must verify their email address before they can log in. Agencies also need to
+ * be approved by an admin, and until then their status is {@code UNAPPROVED_AGENCY}.
+ * Important actions are written to the audit log.
+ */
 @Slf4j
 @Service
 public class UserService {
@@ -49,6 +57,18 @@ public class UserService {
     private final AuditLogService auditLogService;   // new
 
 
+    /**
+     * Creates the service with the components it needs. The password encoder and the
+     * authentication manager are injected lazily to avoid circular dependencies with the
+     * security configuration.
+     *
+     * @param userRepository        access to the users table
+     * @param emailService          sends verification and recovery emails
+     * @param auditLogService       records important actions
+     * @param passwordEncoder       hashes and checks passwords
+     * @param jwtUtils              creates JWT tokens
+     * @param authenticationManager checks the email and password at login
+     */
     @Autowired
     public UserService(UserRepository userRepository,
                        EmailService emailService,
@@ -64,14 +84,40 @@ public class UserService {
         this.auditLogService = auditLogService;
     }
 
+    /**
+     * Registers a new customer. See {@link #createUser(RegisterRequest, Role)}.
+     *
+     * @param request the registration details
+     * @return the created user and a confirmation message
+     * @throws ConflictException if the email is already registered
+     */
     public RegisterResponse registerCustomer(RegisterRequest request) {
         return createUser(request, Role.CUSTOMER);
     }
 
+    /**
+     * Registers a new agency. The agency cannot log in until an admin approves it.
+     * See {@link #createUser(RegisterRequest, Role)}.
+     *
+     * @param request the registration details
+     * @return the created user and a confirmation message
+     * @throws ConflictException if the email is already registered
+     */
     public RegisterResponse registerAgency(RegisterRequest request) {
         return createUser(request, Role.AGENCY);
     }
 
+    /**
+     * Creates a new user with the given role. The password is stored hashed. Customers start
+     * as {@code ACTIVE} and agencies as {@code UNAPPROVED_AGENCY}. Every user starts
+     * unverified and is sent an email with a verification link that is valid for one hour.
+     * The registration is written to the audit log.
+     *
+     * @param request the user name, email and password
+     * @param role    the role of the new user
+     * @return the created user and a confirmation message
+     * @throws ConflictException if the email is already registered
+     */
     public RegisterResponse createUser(RegisterRequest request , Role role){
         if(userRepository.findByEmail(request.email()).isPresent()){
             throw new ConflictException("Email Already Registered"); //409 - conflict
@@ -112,6 +158,15 @@ public class UserService {
         return response;
     }
 
+    /**
+     * Verifies a user's email address using the token from the verification email.
+     * The token is cleared after use, and the action is written to the audit log.
+     *
+     * @param token the verification token
+     * @return a confirmation message
+     * @throws InformationNotFoundException if no user has this token
+     * @throws BadRequestException          if the token has expired
+     */
     public String verify(String token){
         User user = userRepository.findByVerificationToken(token)
                 .orElseThrow(() -> new InformationNotFoundException("Invalid token"));
@@ -131,6 +186,14 @@ public class UserService {
         return "Account verified!";
     }
 
+    /**
+     * Sends a new verification email with a fresh token that is valid for one hour.
+     *
+     * @param email the email address of the user
+     * @return a confirmation message
+     * @throws InformationNotFoundException if no user has this email
+     * @throws ConflictException            if the account is already verified
+     */
     public String resendVerification(String email){
         User user = userRepository.findByEmail(email).
                 orElseThrow(() -> new InformationNotFoundException("No User Found with that email"));
@@ -150,6 +213,14 @@ public class UserService {
         return "Email Sent Successfully";
     }
 
+    /**
+     * Starts the password recovery flow. A recovery token that is valid for one hour is
+     * saved for the user and sent to them by email.
+     *
+     * @param email the email address of the user
+     * @return a confirmation message
+     * @throws InformationNotFoundException if no user has this email
+     */
     public String passwordVerification(String email){
         //check if user exists
         User user = userRepository.findByEmail(email).
@@ -173,6 +244,15 @@ public class UserService {
         return "Email Sent Successfully";
     }
 
+    /**
+     * Sets a new password using the recovery token. The token is cleared after use, and the
+     * action is written to the audit log.
+     *
+     * @param resetPasswordToken the recovery token and the new password
+     * @return a confirmation message
+     * @throws BadRequestException if the token is invalid or expired, or the user has not
+     *                             verified their email
+     */
     public String resetPassword(ResetPasswordToken resetPasswordToken){
         //check if token is real
         User user = userRepository.findByPasswordRecoveryToken(resetPasswordToken.token())
@@ -198,6 +278,18 @@ public class UserService {
         return "Password Updated";
     }
 
+    /**
+     * Logs a user in and returns a JWT token. Spring Security checks the email and password
+     * and also blocks accounts that are not allowed in: unapproved agencies are treated as
+     * locked and deactivated users as disabled. Users who have not verified their email are
+     * also refused.
+     *
+     * @param loginRequest the email and password
+     * @return the JWT token, the user name and the role
+     * @throws ForbiddenException     if the agency is waiting for approval, the account is
+     *                                deactivated, or the email is not verified
+     * @throws NotAuthorizedException if the email or password is wrong
+     */
     public LoginResponse loginUser(LoginRequest loginRequest){
         try{
             Authentication authentication = authenticationManager.authenticate(
@@ -219,18 +311,26 @@ public class UserService {
                     myUserDetails.getUser().getRoleEnum().name());
 
         } catch (LockedException lockedException){
-        log.warn("Login blocked for unapproved agency {}", loginRequest.email());
-        throw new ForbiddenException("Your agency account is waiting for admin approval");
+            log.warn("Login blocked for unapproved agency {}", loginRequest.email());
+            throw new ForbiddenException("Your agency account is waiting for admin approval");
         }
         catch (DisabledException disabledException){
-        log.warn("Login blocked for deactivated account {}", loginRequest.email());
-        throw new ForbiddenException("Your account has been deactivated");
+            log.warn("Login blocked for deactivated account {}", loginRequest.email());
+            throw new ForbiddenException("Your account has been deactivated");
         }
         catch (AuthenticationException authenticationException){
             throw new NotAuthorizedException("Invalid email or password");
         }
     }
 
+    /**
+     * Changes the password of the logged-in user, after checking the current password.
+     * The action is written to the audit log.
+     *
+     * @param changePasswordRequest the current password and the new password
+     * @return a confirmation message
+     * @throws BadRequestException if the current password is wrong
+     */
     public String changePassword(ChangePasswordRequest changePasswordRequest){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         MyUserDetails myUserDetails = (MyUserDetails) authentication.getPrincipal();
@@ -249,12 +349,31 @@ public class UserService {
         return "Password changed successfully";
     }
 
+    /**
+     * Finds a user by email address.
+     *
+     * @param email the email address
+     * @return the user
+     * @throws UsernameNotFoundException if no user has this email (the exception type
+     *                                   Spring Security expects when loading a user)
+     */
     public User findUserByEmailAddress(String email){
         return userRepository.findByEmail(email).orElseThrow(
                 () -> new UsernameNotFoundException("no user found with email:" + email)
         );
     }
 
+    /**
+     * Deactivates a user account so that the user can no longer log in. Only admins can
+     * call this, which is enforced in the controller. The action is written to the audit log.
+     *
+     * @param userId         the id of the user to deactivate
+     * @param authentication the logged-in admin
+     * @throws UsernameNotFoundException    if the admin cannot be found
+     * @throws InformationNotFoundException if the user does not exist
+     * @throws BadRequestException          if the admin tries to deactivate their own account
+     * @throws ConflictException            if the user is already inactive
+     */
     public void deactivateUser(Long userId , Authentication authentication){
 
         User admin = findUserByEmailAddress(authentication.getName());
@@ -278,6 +397,17 @@ public class UserService {
         auditLogService.log(admin.getId(), "USER_DEACTIVATED", "User", user.getId(), message);
     }
 
+    /**
+     * Activates a user account. When the user is an agency waiting for approval, this
+     * approves the agency and the audit log records it as {@code AGENCY_APPROVED}. Only
+     * admins can call this, which is enforced in the controller.
+     *
+     * @param userId         the id of the user to activate
+     * @param authentication the logged-in admin
+     * @throws UsernameNotFoundException    if the admin cannot be found
+     * @throws InformationNotFoundException if the user does not exist
+     * @throws ConflictException            if the user is already active
+     */
     public void activateUser(Long userId , Authentication authentication){
 
         User admin = findUserByEmailAddress(authentication.getName());

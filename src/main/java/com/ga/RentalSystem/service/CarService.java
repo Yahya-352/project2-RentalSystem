@@ -27,6 +27,13 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Business logic for car listings.
+ * <p>
+ * Agencies use this service to create, update, delete and upload images for their own cars.
+ * Anyone can browse the cars that have not been deleted. Deleting a car is a soft delete:
+ * the row stays in the database but is hidden from every query.
+ */
 @Slf4j
 
 @Service
@@ -40,11 +47,20 @@ public class CarService {
     private final MakeRepository makeRepository;
 
     private final ImageRepository imageRepository;
-    //car creation method , user is required to submit car request dto and method
-    // retrieves user email
 
+    /**
+     * Creates a new car listing owned by the logged-in user.
+     * The car starts as available, and the action is written to the audit log.
+     *
+     * @param carRequest     the car details (make, category, model, location, year, plate,
+     *                       transmission, fuel type, seats and price per day)
+     * @param authentication the logged-in user, who becomes the owner of the car
+     * @return the created car
+     * @throws InformationNotFoundException if the user, make or category does not exist
+     * @throws BadRequestException          if the transmission or fuel type is not a valid value
+     */
     public CarResponse createCar(CarRequest carRequest ,
-                                                   Authentication authentication){
+                                 Authentication authentication){
         User owner = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new InformationNotFoundException("User not found"));
 
@@ -85,7 +101,17 @@ public class CarService {
         return toCarResponse(createdCar);
     }
 
-    //get all cars method
+    /**
+     * Returns a page of cars that have not been deleted.
+     * Only one filter is applied at a time, in this order: location, then category, then make.
+     * If none is given, all non-deleted cars are returned.
+     *
+     * @param location the location to filter by (case-insensitive), or {@code null}
+     * @param category the category name to filter by (case-insensitive), or {@code null}
+     * @param make     the make name to filter by (case-insensitive), or {@code null}
+     * @param pageable the page number, page size and sorting
+     * @return a page of cars
+     */
     public PageResponse<CarResponse> getCars(String location, String category, String make, Pageable pageable) {
         Page<Car> carPage;
 
@@ -103,7 +129,13 @@ public class CarService {
         return PageResponse.from(responsePage);
     }
 
-    //get car by id method for 1 car retrieval
+    /**
+     * Returns one car by its id.
+     *
+     * @param id the id of the car
+     * @return the car
+     * @throws InformationNotFoundException if the car does not exist or has been deleted
+     */
     public CarResponse getCarById(Long id){
         Car car = carRepository.findById(id)
                 .orElseThrow(() -> new InformationNotFoundException("Car not found"));
@@ -113,7 +145,13 @@ public class CarService {
         return toCarResponse(car);
     }
 
-    //this method makes owner based car retrieval
+    /**
+     * Returns every car owned by the logged-in user, leaving out deleted cars.
+     *
+     * @param authentication the logged-in user
+     * @return the cars owned by the user
+     * @throws InformationNotFoundException if the user does not exist
+     */
     public List<CarResponse> getMyCars(Authentication authentication){
         User owner = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new InformationNotFoundException("User Not Found"));
@@ -121,7 +159,18 @@ public class CarService {
         return cars.stream().filter(car -> !car.isDeleted()).map(car ->toCarResponse(car)).toList();
     }
 
-    // update cars which are your own listing(not another person's)
+    /**
+     * Updates a car that belongs to the logged-in user, and writes the change to the audit log.
+     *
+     * @param id             the id of the car to update
+     * @param carRequest     the new car details
+     * @param authentication the logged-in user, who must be the owner
+     * @return the updated car
+     * @throws InformationNotFoundException if the user, car, make or category does not exist,
+     *                                      or the car has been deleted
+     * @throws ForbiddenException           if the car belongs to another user
+     * @throws BadRequestException          if the transmission or fuel type is not a valid value
+     */
     public CarResponse updateCar(Long id, CarRequest carRequest, Authentication authentication) {
         User currentUser = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new InformationNotFoundException("User not found"));
@@ -170,7 +219,17 @@ public class CarService {
         return toCarResponse(updatedCar);
     }
 
-    // this method deletes a car that belongs to the current logged owner
+    /**
+     * Deletes a car that belongs to the logged-in user.
+     * This is a soft delete: the car is marked as deleted and unavailable, and the row
+     * stays in the database. The action is written to the audit log.
+     *
+     * @param id             the id of the car to delete
+     * @param authentication the logged-in user, who must be the owner
+     * @throws InformationNotFoundException if the user or car does not exist, or the car
+     *                                      has already been deleted
+     * @throws ForbiddenException           if the car belongs to another user
+     */
     public void deleteCar(Long id , Authentication authentication){
         User currentUser = userRepository.findByEmail(authentication.getName()).orElseThrow(
                 () -> new InformationNotFoundException("User not Found")
@@ -192,7 +251,13 @@ public class CarService {
         auditLogService.log(currentUser.getId(), "CAR_DELETED", "Car", car.getId(), message);
     }
 
-    //template to reduce code as we will need to return car response on every method
+    /**
+     * Converts a {@link Car} entity into a {@link CarResponse}, so every method returns
+     * the same shape.
+     *
+     * @param car the car entity
+     * @return the response object
+     */
     private CarResponse toCarResponse(Car car) {
         return new CarResponse(
                 car.getId(),
@@ -212,6 +277,21 @@ public class CarService {
                 car.getUpdatedAt()
         );
     }
+
+    /**
+     * Uploads an image for a car that belongs to the logged-in user.
+     * The file is validated and saved by {@link #saveFile(MultipartFile)}, and its stored
+     * name is linked to the car in the images table.
+     *
+     * @param id             the id of the car
+     * @param file           the image file (JPG or PNG)
+     * @param authentication the logged-in user, who must be the owner
+     * @throws InformationNotFoundException if the user or car does not exist, or the car
+     *                                      has been deleted
+     * @throws ForbiddenException           if the car belongs to another user
+     * @throws BadRequestException          if the file is empty, is not a JPG or PNG, or
+     *                                      cannot be stored
+     */
     public void uploadImage(Long id, MultipartFile file, Authentication authentication) {
         User currentUser = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new InformationNotFoundException("User not found"));
@@ -233,7 +313,21 @@ public class CarService {
         image.setCar(car);
         imageRepository.save(image);
     }
+
+    /** The folder where car images are stored. */
     private final Path rootLocation = Paths.get("uploads/cars").toAbsolutePath().normalize();
+
+    /**
+     * Validates an uploaded image and saves it to the car images folder.
+     * The file type is checked from the first bytes of the file, not from its name or
+     * content type. The file is stored under a random UUID name, and the final path is
+     * checked to make sure it stays inside the upload folder.
+     *
+     * @param file the uploaded file
+     * @return the random file name the image was stored under
+     * @throws BadRequestException if the file is empty, is not a JPG or PNG, would be stored
+     *                             outside the upload folder, or cannot be written
+     */
     private String saveFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("Failed to store empty file");
