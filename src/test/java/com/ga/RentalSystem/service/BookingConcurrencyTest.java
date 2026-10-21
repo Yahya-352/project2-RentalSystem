@@ -50,7 +50,6 @@ class BookingConcurrencyTest {
     private Car createCar(User agency) {
         Make make = new Make();
         make.setName("Toyota");
-
         Car car = new Car();
         car.setId(1L);
         car.setMake(make);
@@ -72,7 +71,7 @@ class BookingConcurrencyTest {
         return booking;
     }
 
-    //this method showwcases 2 threads accessing same booking at the same time
+    //this method showcases 2 threads accessing same booking at the same time
     @Test
     void approveBooking_twoOverlappingApprovalsAtTheSameTime_onlyOneIsApproved() throws Exception {
         User user = createUser(1L);
@@ -117,7 +116,7 @@ class BookingConcurrencyTest {
         executorService.awaitTermination(5, TimeUnit.SECONDS);
         assertEquals(1 , counter.get());
     }
-
+    
     private Booking copyOfBooking(Booking booking) {
         Booking copy = new Booking();
         copy.setId(booking.getId());

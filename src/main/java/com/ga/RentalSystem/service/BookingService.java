@@ -26,6 +26,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Business logic for car bookings.
@@ -147,34 +149,40 @@ public class BookingService {
      * @throws BadRequestException          if the booking is not pending
      * @throws ConflictException            if an approved booking now covers the same dates
      */
+    private final ConcurrentHashMap<Long , ReentrantLock>  locks = new ConcurrentHashMap<>();
     public BookingResponse approveBooking(Long bookingId,Authentication authentication){
         User currentUser = getCurrentUser(authentication);
+
         Booking booking = bookingRepository.findById(bookingId).orElseThrow(() ->
                 new InformationNotFoundException("Booking Not Found"));
 
         if (!booking.getCar().getOwner().getId().equals(currentUser.getId())) {
             throw new ForbiddenException("You do not own this car");
         }
+        ReentrantLock lock = locks.computeIfAbsent(booking.getCar().getId(), r -> new ReentrantLock());
+        lock.lock();
+        BookingResponse response;
+        try{
+            if (booking.getStatus() != BookingStatus.PENDING) {
+                throw new BadRequestException("Only pending bookings can be approved");
+            }
+            if(isCarAvailable(booking.getCar().getId()
+                    , booking.getStartDate() , booking.getEndDate())){
 
-        if (booking.getStatus() != BookingStatus.PENDING) {
-            throw new BadRequestException("Only pending bookings can be approved");
+                booking.setStatus(BookingStatus.APPROVED);
+                response = toResponse(bookingRepository.save(booking));
+            }else{
+                throw new ConflictException("Car is not available at this date");
+            }
+        }finally {
+            lock.unlock();
         }
-        if(isCarAvailable(booking.getCar().getId()
-                , booking.getStartDate() , booking.getEndDate())){
+        String message = "Booking " + booking.getId() + " approved by Agency " + currentUser.getId();
+        log.info(message);
+        auditLogService.log(currentUser.getId(), "BOOKING_APPROVED", "Booking", booking.getId(), message);
 
-            booking.setStatus(BookingStatus.APPROVED);
-            BookingResponse response = toResponse(bookingRepository.save(booking));
-
-            String message = "Booking " + booking.getId() + " approved by Agency " + currentUser.getId();
-            log.info(message);
-            auditLogService.log(currentUser.getId(), "BOOKING_APPROVED", "Booking", booking.getId(), message);
-
-            notificationService.sendEvent(booking.getRenter().getId(), "BOOKING_APPROVED", response);
-
-            return response;
-        }else{
-            throw new ConflictException("Car is not available at this date");
-        }
+        notificationService.sendEvent(booking.getRenter().getId(), "BOOKING_APPROVED", response);
+        return response;
     }
 
     /**
