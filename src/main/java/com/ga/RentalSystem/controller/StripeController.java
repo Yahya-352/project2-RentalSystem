@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("pay")
 public class StripeController {
-    private StripeService stripeService;
+    private final StripeService stripeService;
     public StripeController(StripeService stripeService) {
         this.stripeService = stripeService;
     }

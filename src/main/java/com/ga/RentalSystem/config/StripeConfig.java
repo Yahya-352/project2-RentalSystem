@@ -6,18 +6,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.stripe.Stripe;
-import jakarta.annotation.PostConstruct;
-
 
 @Configuration
 public class StripeConfig {
 
-    @Value("${app.stripe.secret.key}")
-    private String stripeSecretKey;
+    private StripeClient stripeClient;
 
-    @PostConstruct
-    public void setStripeSecretKey() {
-        Stripe.apiKey = stripeSecretKey;
+    @Bean
+    public StripeClient getStripeClient(@Value("${app.stripe.secret.key}") String stripeSecretKey) {
+        stripeClient = new StripeClient(stripeSecretKey);
+        return stripeClient;
     }
 }
