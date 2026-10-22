@@ -20,13 +20,14 @@ public class StripeService {
 
         SessionCreateParams.LineItem.PriceData priceData =
                  SessionCreateParams.LineItem.PriceData.builder().setCurrency("USD")
-                .setUnitAmount(paymentRequest.amount())
+                .setUnitAmount(paymentRequest.amount()).setProductData(productData)
                 .build();
 
         SessionCreateParams.LineItem lineItem = SessionCreateParams.LineItem.builder()
                 .setQuantity(1L).setPriceData(priceData).build();
 
-        SessionCreateParams params = SessionCreateParams.builder().setMode(SessionCreateParams.Mode.PAYMENT)
+        SessionCreateParams params = SessionCreateParams.builder()
+                .setMode(SessionCreateParams.Mode.PAYMENT)
                 .setSuccessUrl("http://localhost:8080/success")
                 .setCancelUrl("http://localhost:8080/cancel")
                 .addLineItem(lineItem).build();
