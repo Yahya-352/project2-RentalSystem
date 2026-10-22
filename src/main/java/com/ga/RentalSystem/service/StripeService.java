@@ -51,4 +51,8 @@ public class StripeService {
         );
         return paymentResponse;
     }
+
+    public void capturePayment(){
+        
+    }
 }
