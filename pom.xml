@@ -112,6 +112,7 @@
 			<artifactId>stripe-java</artifactId>
 			<version>34.0.0</version>
 		</dependency>
+
 	</dependencies>
 
 	<build>
