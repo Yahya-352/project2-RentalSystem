@@ -19,8 +19,4 @@ public class Payment {
 
     @Column
     private String currency;
-
-
-
-
 }
