@@ -4,17 +4,21 @@ import com.ga.RentalSystem.dto.request.PaymentRequest;
 import com.ga.RentalSystem.dto.response.PaymentResponse;
 import com.ga.RentalSystem.service.StripeService;
 import com.stripe.exception.SignatureVerificationException;
-import com.stripe.net.ApiResource;
+import com.stripe.model.Event;
 import com.stripe.net.Webhook;
-import jdk.jfr.Event;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("pay")
 public class StripeController {
+
     private final StripeService stripeService;
     private final String StripeWebHookSecret;
-    public StripeController(StripeService stripeService, String stripeWebHookSecret) {
+
+    public StripeController(StripeService stripeService,
+                            @Value("${app.stripe.webhook.secret}") String stripeWebHookSecret) {
         this.stripeService = stripeService;
         StripeWebHookSecret = stripeWebHookSecret;
     }
@@ -25,11 +29,14 @@ public class StripeController {
     };
 
     @PostMapping("/webhook")
-    public void capturePayment(@RequestBody String payload , @RequestHeader String header){
+    public ResponseEntity<Object> capturePayment(@RequestBody String payload ,
+                                                 @RequestHeader(("Stripe-Signature")) String header){
+        Event event = null;
         try{
-            Event event = Webhook.constructEvent(payload , header ,"");
+            event = Webhook.constructEvent(payload , header ,StripeWebHookSecret);
+            return ResponseEntity.noContent().build();
         } catch (SignatureVerificationException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Invalid webhook signature", e);
         }
     }
 

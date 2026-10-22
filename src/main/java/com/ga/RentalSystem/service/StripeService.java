@@ -3,8 +3,11 @@ package com.ga.RentalSystem.service;
 import com.ga.RentalSystem.dto.request.PaymentRequest;
 
 import com.ga.RentalSystem.dto.response.PaymentResponse;
+import com.ga.RentalSystem.enums.PaymentStatus;
+import com.ga.RentalSystem.model.Payment;
 import com.stripe.StripeClient;
 import com.stripe.exception.StripeException;
+import com.stripe.model.Event;
 import com.stripe.param.checkout.SessionCreateParams;
 import com.stripe.model.checkout.Session;
 import org.springframework.stereotype.Service;
@@ -49,10 +52,23 @@ public class StripeService {
                 session.getStatus() , "SESSION_CREATED" ,
                 session.getId() , session.getUrl()
         );
+
+        Payment payment = new Payment();
+
+        payment.setAmount(paymentRequest.amount());
+        payment.setCurrency(paymentRequest.currency());
+        payment.setStatus(PaymentStatus.PENDING);
+        payment.setSessionId(session.getId());
+
         return paymentResponse;
     }
 
-    public void capturePayment(){
-        
+    public void capturePayment(Event event){
+        if(event.getType().equals("checkout.session.completed")){
+
+        }else{
+
+        }
+
     }
 }

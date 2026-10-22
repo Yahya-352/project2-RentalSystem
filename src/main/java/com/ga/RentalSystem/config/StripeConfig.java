@@ -13,7 +13,8 @@ public class StripeConfig {
     private StripeClient stripeClient;
 
     @Bean
-    public StripeClient getStripeClient(@Value("${app.stripe.secret.key}") String stripeSecretKey) {
+    public StripeClient getStripeClient
+            (@Value("${app.stripe.secret.key}") String stripeSecretKey){
         stripeClient = new StripeClient(stripeSecretKey);
         return stripeClient;
     }
