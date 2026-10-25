@@ -4,7 +4,6 @@ import com.ga.RentalSystem.dto.request.PaymentRequest;
 
 import com.ga.RentalSystem.dto.response.PaymentResponse;
 import com.ga.RentalSystem.enums.PaymentStatus;
-import com.ga.RentalSystem.exceptions.InformationNotFoundException;
 import com.ga.RentalSystem.model.Payment;
 import com.ga.RentalSystem.repository.PaymentRepository;
 import com.stripe.StripeClient;
@@ -35,7 +34,7 @@ public class StripeService {
         ).build();
 
         SessionCreateParams.LineItem.PriceData priceData =
-                 SessionCreateParams.LineItem.PriceData.builder().setCurrency("USD")
+                 SessionCreateParams.LineItem.PriceData.builder().setCurrency(paymentRequest.currency())
                 .setUnitAmount(paymentRequest.amount()).setProductData(productData)
                 .build();
 
