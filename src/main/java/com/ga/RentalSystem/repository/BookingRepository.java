@@ -3,7 +3,6 @@ package com.ga.RentalSystem.repository;
 import com.ga.RentalSystem.enums.BookingStatus;
 import com.ga.RentalSystem.model.Booking;
 import jakarta.persistence.LockModeType;
-import lombok.ToString;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,6 +22,7 @@ public interface BookingRepository extends JpaRepository<Booking , Long> {
     Page<Booking> findByStatus(BookingStatus status, Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    Optional findByIdForPayment(Long id);
+    @Query("select b from Booking b where b.id = :id")
+    Optional<Booking> findByIdForUpdate(Long id);
 
 }

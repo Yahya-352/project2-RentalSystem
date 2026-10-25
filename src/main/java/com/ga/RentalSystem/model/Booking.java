@@ -40,6 +40,7 @@ public class Booking {
     @Column(nullable = false)
     private BookingStatus status;
 
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

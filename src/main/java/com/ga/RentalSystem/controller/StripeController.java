@@ -8,6 +8,7 @@ import com.stripe.model.Event;
 import com.stripe.net.Webhook;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,9 +24,11 @@ public class StripeController {
         StripeWebHookSecret = stripeWebHookSecret;
     }
 
-    @PostMapping
-    public PaymentResponse checkout(@RequestBody PaymentRequest paymentRequest) {
-        return stripeService.checkout(paymentRequest);
+    @PostMapping("/{bookingId}")
+    public PaymentResponse checkout(@RequestBody PaymentRequest paymentRequest ,
+                                    @PathVariable Long bookingId ,
+                                    Authentication authentication) {
+        return stripeService.checkout(paymentRequest , bookingId ,authentication);
     };
 
     @PostMapping("/webhook")
