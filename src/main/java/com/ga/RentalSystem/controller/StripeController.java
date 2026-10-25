@@ -2,6 +2,7 @@ package com.ga.RentalSystem.controller;
 
 import com.ga.RentalSystem.dto.request.PaymentRequest;
 import com.ga.RentalSystem.dto.response.PaymentResponse;
+import com.ga.RentalSystem.exceptions.BadRequestException;
 import com.ga.RentalSystem.service.StripeService;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
@@ -36,12 +37,11 @@ public class StripeController {
                                                  @RequestHeader(("Stripe-Signature")) String header){
         Event event = null;
         try{
-            event = Webhook.constructEvent(payload , header ,StripeWebHookSecret);
+            event = Webhook.constructEvent(payload , header , StripeWebHookSecret);
             stripeService.capturePayment(event);
-        } catch (SignatureVerificationException e) {
-            throw new RuntimeException("Invalid webhook signature", e);
-        }finally {
             return ResponseEntity.noContent().build();
+        } catch (SignatureVerificationException e) {
+            throw new BadRequestException("Invalid webhook signature");
         }
     }
 

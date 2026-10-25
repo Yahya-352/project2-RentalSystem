@@ -107,11 +107,18 @@ public class StripeService {
 
     public void capturePayment(Event event){
         log.info("capture payment request");
-        Session sessionRetrieved
-                = (Session) event.getDataObjectDeserializer().getObject().orElse(null);
-        if(sessionRetrieved == null){
-            log.error("Session object is null");
+        String type = event.getType();
+
+        if (!type.equals("checkout.session.completed") && !type.equals("checkout.session.expired")) {
+            log.info("Ignoring event type {}", type);
             return;
+        }
+
+        Object eventObject = event.getDataObjectDeserializer().getObject().orElse(null);
+
+        if(!(eventObject instanceof Session sessionRetrieved)){
+            log.error("Event {} does not contain a Session object", event.getId());
+            throw new InformationNotFoundException("Could not read Session from event");
         }
         Payment payment = paymentRepository.findBySessionId(sessionRetrieved.getId());
 
