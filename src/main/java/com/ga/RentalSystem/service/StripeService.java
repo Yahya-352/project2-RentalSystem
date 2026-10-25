@@ -5,20 +5,26 @@ import com.ga.RentalSystem.dto.request.PaymentRequest;
 import com.ga.RentalSystem.dto.response.PaymentResponse;
 import com.ga.RentalSystem.enums.PaymentStatus;
 import com.ga.RentalSystem.model.Payment;
+import com.ga.RentalSystem.repository.PaymentRepository;
 import com.stripe.StripeClient;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
+
 import com.stripe.param.checkout.SessionCreateParams;
 import com.stripe.model.checkout.Session;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 
+@Slf4j
 @Service
 public class StripeService {
     private final StripeClient stripeClient;
+    private final PaymentRepository paymentRepository;
 
-    public StripeService(StripeClient stripeClient) {
+    public StripeService(StripeClient stripeClient, PaymentRepository paymentRepository) {
         this.stripeClient = stripeClient;
+        this.paymentRepository = paymentRepository;
     }
 
     public PaymentResponse checkout(PaymentRequest paymentRequest) {
@@ -59,16 +65,25 @@ public class StripeService {
         payment.setCurrency(paymentRequest.currency());
         payment.setStatus(PaymentStatus.PENDING);
         payment.setSessionId(session.getId());
-
+        paymentRepository.save(payment);
         return paymentResponse;
     }
 
     public void capturePayment(Event event){
-        if(event.getType().equals("checkout.session.completed")){
-
-        }else{
-
+        log.info("capture payment request");
+        Session sessionRetrieved
+                = (Session) event.getDataObjectDeserializer().getObject().orElse(null);
+        if(sessionRetrieved == null){
+            log.error("Session object is null");
+            return;
         }
 
+        Payment payment = paymentRepository.findBySessionId(sessionRetrieved.getId());
+        if(event.getType().equals("checkout.session.completed")){
+            payment.setStatus(PaymentStatus.PAID);
+        }else if (event.getType().equals("checkout.session.expired")){
+            payment.setStatus(PaymentStatus.FAILED);
+        }
+        paymentRepository.save(payment);
     }
 }

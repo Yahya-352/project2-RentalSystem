@@ -34,9 +34,11 @@ public class StripeController {
         Event event = null;
         try{
             event = Webhook.constructEvent(payload , header ,StripeWebHookSecret);
-            return ResponseEntity.noContent().build();
+            stripeService.capturePayment(event);
         } catch (SignatureVerificationException e) {
             throw new RuntimeException("Invalid webhook signature", e);
+        }finally {
+            return ResponseEntity.noContent().build();
         }
     }
 
