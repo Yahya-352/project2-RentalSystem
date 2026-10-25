@@ -4,6 +4,7 @@ import com.ga.RentalSystem.dto.request.PaymentRequest;
 
 import com.ga.RentalSystem.dto.response.PaymentResponse;
 import com.ga.RentalSystem.enums.PaymentStatus;
+import com.ga.RentalSystem.exceptions.InformationNotFoundException;
 import com.ga.RentalSystem.model.Payment;
 import com.ga.RentalSystem.repository.PaymentRepository;
 import com.stripe.StripeClient;
@@ -77,13 +78,22 @@ public class StripeService {
             log.error("Session object is null");
             return;
         }
-
         Payment payment = paymentRepository.findBySessionId(sessionRetrieved.getId());
-        if(event.getType().equals("checkout.session.completed")){
-            payment.setStatus(PaymentStatus.PAID);
-        }else if (event.getType().equals("checkout.session.expired")){
-            payment.setStatus(PaymentStatus.FAILED);
+
+        if(payment!=null){
+            if(payment.getStatus().equals(PaymentStatus.PENDING)){
+                if(event.getType().equals("checkout.session.completed")
+                        && sessionRetrieved.getPaymentStatus().equals("paid")){
+                    payment.setStatus(PaymentStatus.PAID);
+
+                }else if (event.getType().equals("checkout.session.expired")){
+                    payment.setStatus(PaymentStatus.FAILED);
+                }
+                paymentRepository.save(payment);
+            }
+        }else{
+            log.error("Payment Not Found");
         }
-        paymentRepository.save(payment);
+
     }
 }
