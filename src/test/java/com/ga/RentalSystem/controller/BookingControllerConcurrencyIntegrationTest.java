@@ -15,7 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -23,9 +22,16 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -38,10 +44,11 @@ class BookingControllerConcurrencyIntegrationTest {
     private static final String AGENCY_EMAIL = "agency.concurrency@test.com";
     private static final String CUSTOMER_EMAIL = "customer.concurrency@test.com";
     private static final String RAW_PASSWORD = "Password123!";
+    private static final int N = 10;
 
     @Autowired
     private MockMvc mockMvc;
-    private Long bookingId;
+    private List<Long> bookingIds;
     private String token;
 
     private Make make;
@@ -88,23 +95,18 @@ class BookingControllerConcurrencyIntegrationTest {
         car.setPricePerDay(new BigDecimal("20.000"));
         car = carRepository.save(car);
 
-        Booking booking = new Booking();
-        booking.setRenter(customer);
-        booking.setCar(car);
-        booking.setStartDate(LocalDate.now().plusDays(10));
-        booking.setEndDate(LocalDate.now().plusDays(12));
-        booking.setTotalPrice(new BigDecimal("40.000"));
-        booking.setStatus(BookingStatus.PENDING);
-        bookingId = bookingRepository.save(booking).getId();
-
-        Booking booking2 = new Booking();
-        booking.setRenter(customer);
-        booking.setCar(car);
-        booking.setStartDate(LocalDate.now().plusDays(10));
-        booking.setEndDate(LocalDate.now().plusDays(12));
-        booking.setTotalPrice(new BigDecimal("40.000"));
-        booking.setStatus(BookingStatus.PENDING);
-        bookingId = bookingRepository.save(booking).getId();
+        // N pending bookings on the same car and the same dates, so they compete for it
+        bookingIds = new ArrayList<>();
+        for (int i = 0; i < N; i++) {
+            Booking booking = new Booking();
+            booking.setRenter(customer);
+            booking.setCar(car);
+            booking.setStartDate(LocalDate.now().plusDays(10));
+            booking.setEndDate(LocalDate.now().plusDays(12));
+            booking.setTotalPrice(new BigDecimal("40.000"));
+            booking.setStatus(BookingStatus.PENDING);
+            bookingIds.add(bookingRepository.save(booking).getId());
+        }
 
         token = login(AGENCY_EMAIL , RAW_PASSWORD);
     }
@@ -144,17 +146,40 @@ class BookingControllerConcurrencyIntegrationTest {
 
     @Test
     void approveBooking() throws Exception {
-        ExecutorService service = Executors.newFixedThreadPool(5);
-        service.submit(() -> {
-            try {
-                mockMvc.perform(patch("/bookings/{id}/approve" , bookingId)
-                                .header("Authorization" , "Bearer " + token))
-                        .andExpect(status().isOk());
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
+        ExecutorService service = Executors.newFixedThreadPool(N);
+        CountDownLatch ready = new CountDownLatch(N);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<Integer>> futures = new ArrayList<>();
+        List<Integer> statuses = new ArrayList<>();
 
+        try {
+            for (int i = 0; i < N; i++) {
+                Long id = bookingIds.get(i);
+                futures.add(service.submit(() -> {
+                    ready.countDown();
+                    start.await();
+                    int status = mockMvc.perform(patch("/bookings/{id}/approve" , id)
+                                    .header("Authorization" , "Bearer " + token))
+                            .andReturn().getResponse().getStatus();
+                    System.out.println(Thread.currentThread().getName()
+                            + " -> booking " + id + " -> " + status);
+                    return status;
+                }));
+            }
+            ready.await();
+            start.countDown();
+
+            for (Future<Integer> future : futures) {
+                statuses.add(future.get(10, TimeUnit.SECONDS));
+            }
+        } finally {
+            service.shutdown();
+        }
+
+        assertEquals(1, Collections.frequency(statuses, 200),
+                "statuses: " + statuses);
+        assertEquals(N - 1, Collections.frequency(statuses, 409),
+                "statuses: " + statuses);
     }
 
     @Test
@@ -162,7 +187,6 @@ class BookingControllerConcurrencyIntegrationTest {
         mockMvc.perform(get("/bookings/my-cars")
                 .header("Authorization" , "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(bookingId));
+                .andExpect(jsonPath("$.length()").value(N));
     }
 }
