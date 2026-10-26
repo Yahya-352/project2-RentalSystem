@@ -1,6 +1,7 @@
 package com.ga.RentalSystem.service;
 
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -53,6 +54,7 @@ public class NotificationService {
      * @param eventName the name of the event, for example {@code BOOKING_APPROVED}
      * @param data      the event data, which is sent as JSON
      */
+    @Async("notificationExecutor")
     public void sendEvent(Long userId, String eventName, Object data) {
         //gets all the open connections of this user
         List<SseEmitter> userEmitters = emitters.get(userId);

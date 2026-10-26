@@ -1,8 +1,11 @@
 package com.ga.RentalSystem.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 /**
@@ -10,6 +13,7 @@ import org.springframework.stereotype.Service;
  * The mail server is set in the application properties (a Mailtrap sandbox inbox is used
  * for testing).
  */
+@Slf4j
 @Service
 public class EmailService {
 
@@ -24,6 +28,7 @@ public class EmailService {
      * @param body    the message text
      * @throws org.springframework.mail.MailException if the message cannot be sent
      */
+    @Async("emailExecutor")
     public void sendEmail(String to,
                           String subject,
                           String body){
@@ -32,6 +37,11 @@ public class EmailService {
         message.setFrom("noreply@rentalsystem.com");
         message.setSubject(subject);
         message.setText(body);
-        javaMailSender.send(message);
+        try {
+            javaMailSender.send(message);
+            log.info(Thread.currentThread().getName() + ": Email '{}' sent to {}", subject, to);
+        }catch (MailException me){
+            log.error(Thread.currentThread().getName() + ": Failed to send email '{}' to {}", subject, to, me);
+        }
     }
 }

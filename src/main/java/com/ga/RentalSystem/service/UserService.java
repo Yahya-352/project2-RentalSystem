@@ -140,9 +140,10 @@ public class UserService {
 
         String link = "http://localhost:8080/users/verify?token=" + token;
 
+        User createdUser = userRepository.save(user);
+
         emailService.sendEmail(user.getEmail(), "Verify your account",
                 "Click to verify: " + link);
-        User createdUser = userRepository.save(user);
 
         String message = "User " + createdUser.getId() + " registered as " + role;
         log.info(message);
