@@ -2,14 +2,11 @@ package com.ga.RentalSystem.service;
 
 import com.ga.RentalSystem.exceptions.InformationNotFoundException;
 import com.ga.RentalSystem.model.Image;
-import com.ga.RentalSystem.model.User;
-import com.ga.RentalSystem.model.UserProfile;
+
 import com.ga.RentalSystem.repository.ImageRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
