@@ -1,6 +1,7 @@
 package com.ga.RentalSystem.controller;
 
 import com.ga.RentalSystem.dto.request.BookingRequest;
+import com.ga.RentalSystem.dto.response.BookingCalenderDatesResponse;
 import com.ga.RentalSystem.dto.response.BookingResponse;
 import com.ga.RentalSystem.dto.response.PageResponse;
 import com.ga.RentalSystem.service.BookingService;
@@ -79,5 +80,11 @@ public class BookingController {
                                                         @RequestParam(required = false) String status,
                                                         @PageableDefault(size = 10) Pageable pageable) {
         return bookingService.getAllBookings(authentication, status, pageable);
+    }
+
+    @GetMapping("/car/{carId}/dates")
+    @Operation(summary = "date ranges of a car, for the booking calendar")
+    public List<BookingCalenderDatesResponse> getBookedDates(@PathVariable Long carId) {
+        return bookingService.getBookedDates(carId);
     }
 }
