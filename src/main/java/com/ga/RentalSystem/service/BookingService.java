@@ -1,6 +1,7 @@
 package com.ga.RentalSystem.service;
 
 import com.ga.RentalSystem.dto.request.BookingRequest;
+import com.ga.RentalSystem.dto.response.BookingCalenderDatesResponse;
 import com.ga.RentalSystem.dto.response.BookingResponse;
 import com.ga.RentalSystem.dto.response.PageResponse;
 import com.ga.RentalSystem.enums.BookingStatus;
@@ -106,7 +107,20 @@ public class BookingService {
         log.info(message);
         auditLogService.log(renter.getId(), "BOOKING_CREATED", "Booking", saved.getId(), message);
         return response;
+    }
+    public List<BookingCalenderDatesResponse> getBookedDates(Long carId){
+        Car car = carRepository.findById(carId).orElseThrow(
+                () -> new InformationNotFoundException("Car not found"));
+        if(car.isDeleted()){
+            throw new InformationNotFoundException("Car not found");
+        }
+        List<Booking> bookings = bookingRepository
+                .findByCarIdAndStatusAndEndDateAfterOrderByStartDateAsc
+                        (carId , BookingStatus.APPROVED , LocalDate.now());
 
+        return bookings.stream().map(booking ->
+                new BookingCalenderDatesResponse
+                        (booking.getStartDate() , booking.getEndDate())).toList();
     }
 
     /**
