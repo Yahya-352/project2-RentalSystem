@@ -11,8 +11,8 @@ public record CarRequest(
         String model,
         @NotNull(message = "Category id is required")
         Long categoryId,
-        @NotBlank(message = "location is required")
-        String location,
+        @NotNull
+        Long cityId,
         @Min(value = 1980, message = "Year must be 1980 or later")
         @Max(value = 2100, message = "Year is not valid")
         int year,

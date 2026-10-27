@@ -37,13 +37,13 @@ public class CarController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @Operation(summary = "List available cars (filter by location, category or make)")
+    @Operation(summary = "List available cars (filter by city, category or make)")
     @GetMapping("/")
-    public PageResponse<CarResponse> getCars(@RequestParam(required = false) String location,
+    public PageResponse<CarResponse> getCars(@RequestParam(required = false) Long cityId,
                                              @RequestParam(required = false) String category,
                                              @RequestParam(required = false) String make,
                                              @PageableDefault(size = 10) Pageable pageable) {
-        return carService.getCars(location, category, make, pageable);
+        return carService.getCars(cityId, category, make, pageable);
     }
 
     @Operation(summary = "get a Car By its id")

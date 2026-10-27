@@ -12,7 +12,7 @@ public interface CarRepository extends JpaRepository<Car, Long> {
 
     Page<Car> findByDeletedFalse(Pageable pageable);
 
-    Page<Car> findByDeletedFalseAndLocationIgnoreCase(String location, Pageable pageable);
+    Page<Car> findByDeletedFalseAndCityId(Long cityId, Pageable pageable);
 
     Page<Car> findByDeletedFalseAndCategoryNameIgnoreCase(String categoryName, Pageable pageable);
 

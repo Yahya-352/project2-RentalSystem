@@ -47,6 +47,7 @@ public class CarService {
     private final MakeRepository makeRepository;
 
     private final ImageRepository imageRepository;
+    private final CityRepository cityRepository;
 
     /**
      * Creates a new car listing owned by the logged-in user.
@@ -72,7 +73,9 @@ public class CarService {
         Category category = categoryRepository.findById(carRequest.categoryId())
                 .orElseThrow(() -> new InformationNotFoundException("Category not found"));
         car.setCategory(category);
-        car.setLocation(carRequest.location());
+        City city = cityRepository.findById(carRequest.cityId())
+                .orElseThrow(() -> new InformationNotFoundException("City not found"));
+        car.setCity(city);
         car.setYear(carRequest.year());
         car.setLicensePlate(carRequest.licensePlate());
         car.setSeats(carRequest.seats());
@@ -103,20 +106,20 @@ public class CarService {
 
     /**
      * Returns a page of cars that have not been deleted.
-     * Only one filter is applied at a time, in this order: location, then category, then make.
+     * Only one filter is applied at a time, in this order: city, then category, then make.
      * If none is given, all non-deleted cars are returned.
      *
-     * @param location the location to filter by (case-insensitive), or {@code null}
+     * @param cityId   the id of the city to filter by, or {@code null}
      * @param category the category name to filter by (case-insensitive), or {@code null}
      * @param make     the make name to filter by (case-insensitive), or {@code null}
      * @param pageable the page number, page size and sorting
      * @return a page of cars
      */
-    public PageResponse<CarResponse> getCars(String location, String category, String make, Pageable pageable) {
+    public PageResponse<CarResponse> getCars(Long cityId, String category, String make, Pageable pageable) {
         Page<Car> carPage;
 
-        if (location != null) {
-            carPage = carRepository.findByDeletedFalseAndLocationIgnoreCase(location, pageable);
+        if (cityId != null) {
+            carPage = carRepository.findByDeletedFalseAndCityId(cityId, pageable);
         } else if (category != null) {
             carPage = carRepository.findByDeletedFalseAndCategoryNameIgnoreCase(category, pageable);
         } else if (make != null) {
@@ -192,7 +195,10 @@ public class CarService {
         Category category = categoryRepository.findById(carRequest.categoryId())
                 .orElseThrow(() -> new InformationNotFoundException("Category not found"));
         car.setCategory(category);
-        car.setLocation(carRequest.location());
+        City city = cityRepository.findById(carRequest.cityId()).orElseThrow(
+                () -> new InformationNotFoundException("City not found")
+        );
+        car.setCity(city);
         car.setYear(carRequest.year());
         car.setLicensePlate(carRequest.licensePlate());
         car.setSeats(carRequest.seats());
@@ -264,7 +270,8 @@ public class CarService {
                 car.getMake().getName(),
                 car.getModel(),
                 car.getCategory().getName(),
-                car.getLocation(),
+                car.getCity().getName(),
+                car.getCity().getCountry().getName(),
                 car.getYear(),
                 car.getLicensePlate(),
                 car.getTransmission().name(),

@@ -22,7 +22,9 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -38,7 +40,7 @@ public class DataSeeder implements CommandLineRunner {
     private final BookingRepository bookingRepository;
     private final CountryRepository countryRepository;
     private final CityRepository cityRepository;
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${app.admin.email}")
@@ -57,6 +59,8 @@ public class DataSeeder implements CommandLineRunner {
         seedMakes();
         seedUser("customer", "customer@rental.com", Role.CUSTOMER);
         seedUser("agency", "agency@rental.com", Role.AGENCY);
+        seedCountries();
+        seedCities();
         seedCars();
         seedBookings();
     }
@@ -68,14 +72,44 @@ public class DataSeeder implements CommandLineRunner {
             throw new RuntimeException(e);
         }
     }
-    private record countriesCitiesJson(String name , List<String> cities){};
-    private List<countriesCitiesJson> listCities(){
-        ClassPathResource resource = new ClassPathResource("data/cities.json");
+    private record CountriesCitiesJson(String name , List<String> cities){};
+    private List<CountriesCitiesJson> listCities(){
+        ClassPathResource resource = new ClassPathResource("data/countries+cities.json");
         try(InputStream is = resource.getInputStream()) {
-            return objectMapper.readValue(is, new TypeReference<List<countriesCitiesJson>>(){});
+            return objectMapper.readValue(is, new TypeReference<List<CountriesCitiesJson>>(){});
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void seedCountries(){
+        if (countryRepository.count() > 0){return;};
+        countryRepository.saveAll(listCountries());
+        log.info("Countries saved successfully");
+    }
+    private void seedCities(){
+        if (cityRepository.count() > 0){
+            return;
+        }
+        //the cities file links cities to their country by name
+        Map<String , Country> countriesByName = countryRepository.findAll().stream()
+                .collect(Collectors.toMap(Country::getName , c -> c));
+        List<City> cities = new ArrayList<>();
+        for (CountriesCitiesJson entry : listCities()){
+            Country country = countriesByName.get(entry.name());
+            if (country == null){
+                log.warn("Country not found: " + entry.name());
+                continue;
+            }
+            for (String cityName : entry.cities()){
+                City city = new City();
+                city.setName(cityName);
+                city.setCountry(country);
+                cities.add(city);
+            }
+        }
+        cityRepository.saveAll(cities);
+        log.info(cities.size() + " Cities saved successfully");
     }
     private void seedAdmin(){
         if(userRepository.findByEmail(adminMail).isPresent()){
@@ -167,8 +201,9 @@ public class DataSeeder implements CommandLineRunner {
             //looked up by name, because ids depend on the order rows were inserted
             Make make = findMake((String) row[1]);
             Category category = findCategory((String) row[3]);
-            if(make == null || category == null){
-                log.warn("Skipping seed car " + plate + ": make or category not found");
+            City city = cityRepository.findByNameAndCountryIso2((String) row[4], "BH").orElse(null);
+            if(make == null || category == null || city == null){
+                log.warn("Skipping seed car " + plate + ": make, category or city not found");
                 continue;
             }
 
@@ -177,7 +212,7 @@ public class DataSeeder implements CommandLineRunner {
             car.setMake(make);
             car.setModel((String) row[2]);
             car.setCategory(category);
-            car.setLocation((String) row[4]);
+            car.setCity(city);
             car.setYear((Integer) row[5]);
             car.setTransmission((TransmissionType) row[6]);
             car.setFuelType((FuelType) row[7]);
