@@ -1,6 +1,5 @@
 package com.ga.RentalSystem.controller;
 
-import com.ga.RentalSystem.dto.request.PaymentRequest;
 import com.ga.RentalSystem.dto.response.PaymentResponse;
 import com.ga.RentalSystem.exceptions.BadRequestException;
 import com.ga.RentalSystem.service.StripeService;
@@ -26,10 +25,9 @@ public class StripeController {
     }
 
     @PostMapping("/{bookingId}")
-    public PaymentResponse checkout(@RequestBody PaymentRequest paymentRequest ,
-                                    @PathVariable Long bookingId ,
+    public PaymentResponse checkout(@PathVariable Long bookingId ,
                                     Authentication authentication) {
-        return stripeService.checkout(paymentRequest , bookingId ,authentication);
+        return stripeService.checkout(bookingId ,authentication);
     };
 
     @PostMapping("/webhook")

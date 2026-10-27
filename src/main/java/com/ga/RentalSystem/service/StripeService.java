@@ -1,9 +1,9 @@
 package com.ga.RentalSystem.service;
 
-import com.ga.RentalSystem.dto.request.PaymentRequest;
-
 import com.ga.RentalSystem.dto.response.PaymentResponse;
+import com.ga.RentalSystem.enums.BookingStatus;
 import com.ga.RentalSystem.enums.PaymentStatus;
+import com.ga.RentalSystem.exceptions.BadRequestException;
 import com.ga.RentalSystem.exceptions.ConflictException;
 import com.ga.RentalSystem.exceptions.ForbiddenException;
 import com.ga.RentalSystem.exceptions.InformationNotFoundException;
@@ -21,6 +21,7 @@ import com.stripe.param.checkout.SessionCreateParams;
 import com.stripe.model.checkout.Session;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -32,20 +33,22 @@ public class StripeService {
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
+    private final String frontendUrl;
 
     public StripeService(StripeClient stripeClient,
                          PaymentRepository paymentRepository,
-                         BookingRepository bookingRepository, UserRepository userRepository) {
+                         BookingRepository bookingRepository, UserRepository userRepository,
+                         @Value("${app.frontend.url}") String frontendUrl) {
         this.stripeClient = stripeClient;
         this.paymentRepository = paymentRepository;
 
         this.bookingRepository = bookingRepository;
         this.userRepository = userRepository;
+        this.frontendUrl = frontendUrl;
     }
 
     @Transactional
-    public PaymentResponse checkout(PaymentRequest paymentRequest ,
-                                    Long bookingId ,
+    public PaymentResponse checkout(Long bookingId ,
                                     Authentication authentication) {
         User currentUser = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new InformationNotFoundException("User not found"));
@@ -57,6 +60,10 @@ public class StripeService {
             throw new ForbiddenException("You are not allowed to perform this action");
         }
 
+        if (!booking.getStatus().equals(BookingStatus.APPROVED)) {
+            throw new BadRequestException("Only approved Bookings can be paid");
+        }
+
         if (paymentRepository.existsByBookingIdAndStatus(bookingId, PaymentStatus.PENDING)) {
             throw new ConflictException("Booking " + bookingId + " already has a pending payment");
         }
@@ -65,12 +72,12 @@ public class StripeService {
         }
         SessionCreateParams.LineItem.PriceData.ProductData productData =
                 SessionCreateParams.LineItem.PriceData.ProductData.builder().setName(
-                        "TEST_PAYMENT"
+                        "Booking " + booking.getId().toString() + " - " + booking.getCar().getModel()
                 ).build();
 
         SessionCreateParams.LineItem.PriceData priceData =
-                SessionCreateParams.LineItem.PriceData.builder().setCurrency(paymentRequest.currency())
-                        .setUnitAmount(booking.getTotalPrice().longValue()).setProductData(productData)
+                SessionCreateParams.LineItem.PriceData.builder().setCurrency("bhd")
+                        .setUnitAmount(booking.getTotalPrice().movePointRight(3).longValueExact()).setProductData(productData)
                         .build();
 
         SessionCreateParams.LineItem lineItem = SessionCreateParams.LineItem.builder()
@@ -78,8 +85,8 @@ public class StripeService {
 
         SessionCreateParams params = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
-                .setSuccessUrl("http://localhost:8080/success")
-                .setCancelUrl("http://localhost:8080/cancel")
+                .setSuccessUrl(frontendUrl + "/payment/success?session_id={CHECKOUT_SESSION_ID}")
+                .setCancelUrl(frontendUrl + "/payment/cancel?bookingId=" + booking.getId())
                 .addLineItem(lineItem).build();
 
         Session session;
@@ -96,8 +103,8 @@ public class StripeService {
 
         Payment payment = new Payment();
 
-        payment.setAmount(booking.getTotalPrice().longValue());
-        payment.setCurrency(paymentRequest.currency());
+        payment.setAmount(booking.getTotalPrice());
+        payment.setCurrency("BHD");
         payment.setStatus(PaymentStatus.PENDING);
         payment.setSessionId(session.getId());
         payment.setBooking(booking);

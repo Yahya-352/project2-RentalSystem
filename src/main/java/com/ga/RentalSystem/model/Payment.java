@@ -4,6 +4,8 @@ import com.ga.RentalSystem.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 @Entity
 @Table(name = "payments")
@@ -16,8 +18,8 @@ public class Payment {
     @ManyToOne(fetch = FetchType.LAZY)
     private Booking booking;
 
-    @Column(nullable = false)
-    private Long amount;
+    @Column(precision = 10, scale = 3)
+    private BigDecimal amount;
 
     @Column(nullable = false)
     private String currency;
