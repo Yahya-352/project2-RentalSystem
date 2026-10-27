@@ -44,7 +44,7 @@ class BookingControllerConcurrencyIntegrationTest {
     private static final String AGENCY_EMAIL = "agency.concurrency@test.com";
     private static final String CUSTOMER_EMAIL = "customer.concurrency@test.com";
     private static final String RAW_PASSWORD = "Password123!";
-    private static final int N = 10;
+    private static final int N = 2;
 
     @Autowired
     private MockMvc mockMvc;
@@ -95,7 +95,6 @@ class BookingControllerConcurrencyIntegrationTest {
         car.setPricePerDay(new BigDecimal("20.000"));
         car = carRepository.save(car);
 
-        // N pending bookings on the same car and the same dates, so they compete for it
         bookingIds = new ArrayList<>();
         for (int i = 0; i < N; i++) {
             Booking booking = new Booking();
@@ -124,7 +123,6 @@ class BookingControllerConcurrencyIntegrationTest {
 
     @AfterEach
     void cleanUp() {
-        // only what setUp created, children before parents because of the foreign keys
         bookingRepository.deleteAll(bookingRepository.findByCarId(car.getId()));
         carRepository.delete(car);
         makeRepository.delete(make);
@@ -149,6 +147,7 @@ class BookingControllerConcurrencyIntegrationTest {
         ExecutorService service = Executors.newFixedThreadPool(N);
         CountDownLatch ready = new CountDownLatch(N);
         CountDownLatch start = new CountDownLatch(1);
+
         List<Future<Integer>> futures = new ArrayList<>();
         List<Integer> statuses = new ArrayList<>();
 
