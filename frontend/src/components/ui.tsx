@@ -52,6 +52,11 @@ export function StatusBadge({ status }: { status: BookingStatus | string }) {
   return <span className={`badge badge-${status.toLowerCase()}`}>{titleCase(status)}</span>;
 }
 
+/** Shown next to the status once the Stripe payment for the booking has gone through. */
+export function PaidBadge({ paid }: { paid: boolean }) {
+  return paid ? <span className="badge badge-paid">Paid ✓</span> : null;
+}
+
 export function Field({
   label,
   hint,

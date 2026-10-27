@@ -16,6 +16,7 @@ import { CarDetailPage } from './pages/customer/CarDetailPage';
 import { CarsPage } from './pages/customer/CarsPage';
 import { CustomerProfilePage } from './pages/customer/CustomerProfilePage';
 import { MyBookingsPage } from './pages/customer/MyBookingsPage';
+import { PaymentCancelPage, PaymentSuccessPage } from './pages/customer/PaymentResultPages';
 
 export default function App() {
   const { user } = useAuth();
@@ -43,6 +44,9 @@ export default function App() {
           <Route element={<RequireAuth roles={['CUSTOMER']} />}>
             <Route path="/bookings" element={<MyBookingsPage />} />
             <Route path="/profile" element={<CustomerProfilePage />} />
+            {/* Stripe Checkout returns here (StripeService success/cancel URLs). */}
+            <Route path="/payment/success" element={<PaymentSuccessPage />} />
+            <Route path="/payment/cancel" element={<PaymentCancelPage />} />
           </Route>
 
           <Route element={<RequireAuth roles={['AGENCY']} />}>

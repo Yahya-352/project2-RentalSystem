@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { errorMessage } from '../../api/client';
 import { bookingsApi } from '../../api/endpoints';
 import type { BookingResponse, BookingStatus } from '../../api/types';
-import { ConfirmDialog, EmptyState, ErrorBanner, PageHeader, Spinner, StatusBadge } from '../../components/ui';
+import { ConfirmDialog, EmptyState, ErrorBanner, PageHeader, PaidBadge, Spinner, StatusBadge } from '../../components/ui';
 import { daysBetween, formatDate, formatDateTime, formatMoney } from '../../lib/format';
 import { useAsync } from '../../lib/useAsync';
 import { useNotifications } from '../../notifications/NotificationContext';
@@ -119,6 +119,7 @@ export function AgencyBookingsPage() {
                   <td className="num">{formatMoney(b.totalPrice)}</td>
                   <td>
                     <StatusBadge status={b.status} />
+                    <PaidBadge paid={b.paid} />
                   </td>
                   <td className="actions">
                     {b.status === 'PENDING' && (

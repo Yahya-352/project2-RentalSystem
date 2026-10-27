@@ -17,5 +17,6 @@ public record BookingResponse(
         BigDecimal totalPrice,
         BookingStatus status,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        boolean paid
 ) {}

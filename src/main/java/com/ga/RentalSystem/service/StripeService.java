@@ -21,11 +21,14 @@ import com.stripe.param.checkout.SessionCreateParams;
 import com.stripe.model.checkout.Session;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 
+@Transactional
 @Slf4j
 @Service
 public class StripeService {
@@ -47,7 +50,6 @@ public class StripeService {
         this.frontendUrl = frontendUrl;
     }
 
-    @Transactional
     public PaymentResponse checkout(Long bookingId ,
                                     Authentication authentication) {
         User currentUser = userRepository.findByEmail(authentication.getName())
@@ -75,9 +77,13 @@ public class StripeService {
                         "Booking " + booking.getId().toString() + " - " + booking.getCar().getModel()
                 ).build();
 
+        // The Stripe account can't take BHD yet, so for now the same number is charged in USD
+        // (no exchange-rate conversion). USD has 2 decimals, so Stripe gets cents.
+        BigDecimal amount = booking.getTotalPrice().setScale(2, RoundingMode.HALF_UP);
+
         SessionCreateParams.LineItem.PriceData priceData =
-                SessionCreateParams.LineItem.PriceData.builder().setCurrency("bhd")
-                        .setUnitAmount(booking.getTotalPrice().movePointRight(3).longValueExact()).setProductData(productData)
+                SessionCreateParams.LineItem.PriceData.builder().setCurrency("usd")
+                        .setUnitAmount(amount.movePointRight(2).longValueExact()).setProductData(productData)
                         .build();
 
         SessionCreateParams.LineItem lineItem = SessionCreateParams.LineItem.builder()
@@ -103,8 +109,8 @@ public class StripeService {
 
         Payment payment = new Payment();
 
-        payment.setAmount(booking.getTotalPrice());
-        payment.setCurrency("BHD");
+        payment.setAmount(amount);
+        payment.setCurrency("USD");
         payment.setStatus(PaymentStatus.PENDING);
         payment.setSessionId(session.getId());
         payment.setBooking(booking);
@@ -134,6 +140,7 @@ public class StripeService {
                 if(event.getType().equals("checkout.session.completed")
                         && sessionRetrieved.getPaymentStatus().equals("paid")){
                     payment.setStatus(PaymentStatus.PAID);
+                    payment.getBooking().setPaid(true);
 
                 }else if (event.getType().equals("checkout.session.expired")){
                     payment.setStatus(PaymentStatus.FAILED);

@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
 import { bookingsApi } from '../../api/endpoints';
 import type { BookingStatus } from '../../api/types';
-import { EmptyState, ErrorBanner, PageHeader, Pagination, Spinner, StatusBadge } from '../../components/ui';
+import { EmptyState, ErrorBanner, PageHeader, Pagination, PaidBadge, Spinner, StatusBadge } from '../../components/ui';
 import { BOOKING_STATUSES } from '../../lib/constants';
 import { formatDate, formatDateTime, formatMoney, titleCase } from '../../lib/format';
 import { useAsync } from '../../lib/useAsync';
@@ -83,6 +83,7 @@ export function AdminBookingsPage() {
                     <td className="num">{formatMoney(b.totalPrice)}</td>
                     <td>
                       <StatusBadge status={b.status} />
+                      <PaidBadge paid={b.paid} />
                     </td>
                     <td className="muted small">{formatDateTime(b.createdAt)}</td>
                   </tr>

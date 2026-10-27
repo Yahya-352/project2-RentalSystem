@@ -121,6 +121,16 @@ export interface BookingResponse {
   status: BookingStatus;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
+  /** Set by the Stripe webhook once the payment for this booking succeeds. */
+  paid: boolean;
+}
+
+/** From POST /pay/{bookingId}: a Stripe Checkout session to send the customer to. */
+export interface PaymentResponse {
+  status: string;
+  message: string;
+  sessionId: string;
+  sessionUrl: string;
 }
 
 export interface UserProfileResponse {

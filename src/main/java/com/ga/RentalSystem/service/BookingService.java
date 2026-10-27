@@ -360,7 +360,8 @@ public class BookingService {
                 booking.getTotalPrice(),
                 booking.getStatus(),
                 booking.getCreatedAt(),
-                booking.getUpdatedAt()
+                booking.getUpdatedAt(),
+                booking.isPaid()
         );
     }
 

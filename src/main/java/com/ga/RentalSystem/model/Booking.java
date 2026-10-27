@@ -40,6 +40,9 @@ public class Booking {
     @Column(nullable = false)
     private BookingStatus status;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean paid;
+
 
     @CreationTimestamp
     private LocalDateTime createdAt;

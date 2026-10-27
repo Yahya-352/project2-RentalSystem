@@ -18,6 +18,7 @@ import type {
   LoginResponse,
   MakeResponse,
   PageResponse,
+  PaymentResponse,
   RegisterRequest,
   RegisterResponse,
   ResetPasswordRequest,
@@ -106,6 +107,11 @@ export const bookingsApi = {
     request<PageResponse<BookingResponse>>('/bookings', { query: { ...params } }),
   /** Upcoming approved bookings of a car, for the availability calendar. */
   bookedDates: (carId: number) => request<BookedDateRange[]>(`/bookings/car/${carId}/dates`),
+};
+
+export const paymentsApi = {
+  /** Creates a Stripe Checkout session for an approved booking; the browser is then sent to sessionUrl. */
+  checkout: (bookingId: number) => request<PaymentResponse>(`/pay/${bookingId}`, { method: 'POST' }),
 };
 
 export const customerProfileApi = {
