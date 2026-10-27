@@ -1,6 +1,7 @@
 package com.ga.RentalSystem.service;
 
 import com.ga.RentalSystem.dto.request.CarRequest;
+import com.ga.RentalSystem.dto.request.CarSearchRequest;
 import com.ga.RentalSystem.dto.response.CarResponse;
 import com.ga.RentalSystem.dto.response.PageResponse;
 import com.ga.RentalSystem.enums.FuelType;
@@ -10,16 +11,18 @@ import com.ga.RentalSystem.exceptions.ForbiddenException;
 import com.ga.RentalSystem.exceptions.InformationNotFoundException;
 import com.ga.RentalSystem.model.*;
 import com.ga.RentalSystem.repository.*;
+import com.ga.RentalSystem.specification.CarSpecification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
-
+import static com.ga.RentalSystem.specification.CarSpecification.*;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -109,27 +112,51 @@ public class CarService {
      * Only one filter is applied at a time, in this order: city, then category, then make.
      * If none is given, all non-deleted cars are returned.
      *
-     * @param cityId   the id of the city to filter by, or {@code null}
-     * @param category the category name to filter by (case-insensitive), or {@code null}
-     * @param make     the make name to filter by (case-insensitive), or {@code null}
+
      * @param pageable the page number, page size and sorting
      * @return a page of cars
      */
-    public PageResponse<CarResponse> getCars(Long cityId, String category, String make, Pageable pageable) {
-        Page<Car> carPage;
-
-        if (cityId != null) {
-            carPage = carRepository.findByDeletedFalseAndCityId(cityId, pageable);
-        } else if (category != null) {
-            carPage = carRepository.findByDeletedFalseAndCategoryNameIgnoreCase(category, pageable);
-        } else if (make != null) {
-            carPage = carRepository.findByDeletedFalseAndMakeNameIgnoreCase(make, pageable);
-        } else {
-            carPage = carRepository.findByDeletedFalse(pageable);
+    public PageResponse<CarResponse> getCars(CarSearchRequest request, Pageable pageable) {
+        if (request.minPrice() != null && request.maxPrice() != null
+                && request.minPrice().compareTo(request.maxPrice()) > 0) {
+            throw new BadRequestException("minPrice cannot be greater than maxPrice");
         }
 
+        Page<Car> carPage = carRepository.findAll(buildSpecification(request) , pageable);
         Page<CarResponse> responsePage = carPage.map(car -> toCarResponse(car));
         return PageResponse.from(responsePage);
+    }
+
+    private Specification<Car> buildSpecification(CarSearchRequest request){
+        Specification<Car> spec = notDeleted();
+        if (request.cityId() != null) {
+            spec = spec.and(hasCity(request.cityId()));
+        }
+        if (request.countryId() != null) {
+            spec = spec.and(hasCountry(request.countryId()));
+        }
+        if (request.categoryId() != null) {
+            spec = spec.and(hasCategory(request.categoryId()));
+        }
+        if (request.makeId() != null) {
+            spec = spec.and(hasMake(request.makeId()));
+        }
+        if (request.maxPrice() != null) {
+            spec = spec.and(hasMaxPrice(request.maxPrice()));
+        }
+        if (request.minPrice() != null) {
+            spec = spec.and(hasMinPrice(request.minPrice()));
+        }
+        if (request.transmission() != null) {
+            spec = spec.and(hasTransmissionType(request.transmission()));
+        }
+        if (request.fuelType() != null) {
+            spec = spec.and(hasFuelType(request.fuelType()));
+        }
+        if (request.minSeats() != null) {
+            spec = spec.and(minSeats(request.minSeats()));
+        }
+        return spec;
     }
 
     /**

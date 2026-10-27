@@ -1,6 +1,7 @@
 package com.ga.RentalSystem.controller;
 
 import com.ga.RentalSystem.dto.request.CarRequest;
+import com.ga.RentalSystem.dto.request.CarSearchRequest;
 import com.ga.RentalSystem.dto.response.CarResponse;
 import com.ga.RentalSystem.dto.response.PageResponse;
 import com.ga.RentalSystem.service.CarService;
@@ -39,11 +40,9 @@ public class CarController {
 
     @Operation(summary = "List available cars (filter by city, category or make)")
     @GetMapping("/")
-    public PageResponse<CarResponse> getCars(@RequestParam(required = false) Long cityId,
-                                             @RequestParam(required = false) String category,
-                                             @RequestParam(required = false) String make,
+    public PageResponse<CarResponse> getCars(@ModelAttribute @Valid CarSearchRequest request,
                                              @PageableDefault(size = 10) Pageable pageable) {
-        return carService.getCars(cityId, category, make, pageable);
+        return carService.getCars(request, pageable);
     }
 
     @Operation(summary = "get a Car By its id")
