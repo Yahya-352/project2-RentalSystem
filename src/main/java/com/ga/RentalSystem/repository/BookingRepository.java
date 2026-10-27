@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +21,10 @@ public interface BookingRepository extends JpaRepository<Booking , Long> {
     List<Booking> findByCarOwnerId(Long ownerId);
 
     Page<Booking> findByStatus(BookingStatus status, Pageable pageable);
+
+    List<Booking> findByCarIdAndStatusAndEndDateAfterOrderByStartDateAsc(Long carId,
+                                                                    BookingStatus status,
+                                                                    LocalDate today);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select b from Booking b where b.id = :id")
