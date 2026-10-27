@@ -29,7 +29,6 @@ public class CarController {
     private final CarService carService;
 
     @Operation(summary = "Create a car listing (agency only)")
-
     @PreAuthorize("hasRole('AGENCY')")
     @PostMapping("/create")
     public ResponseEntity<CarResponse> createCar(@RequestBody @Valid CarRequest carRequest ,
