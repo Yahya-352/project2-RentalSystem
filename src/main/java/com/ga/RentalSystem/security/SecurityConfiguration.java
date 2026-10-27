@@ -3,6 +3,7 @@ package com.ga.RentalSystem.security;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -49,7 +50,10 @@ public class SecurityConfiguration {
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
                                 "/pay/webhook"
-                        ).permitAll().anyRequest().authenticated());
+                        ).permitAll()
+                        // public lists for the location pickers, read-only
+                        .requestMatchers(HttpMethod.GET, "/countries", "/cities").permitAll()
+                        .anyRequest().authenticated());
         http.addFilterBefore(authenticationJwtTokenFilter() ,
                 UsernamePasswordAuthenticationFilter.class);
         return http.build();

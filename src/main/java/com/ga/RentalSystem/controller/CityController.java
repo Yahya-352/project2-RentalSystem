@@ -22,8 +22,7 @@ public class CityController {
 
     @GetMapping
     @Operation(summary = "Get the cities of a country, optionally filtered by name")
-    public List<CityResponse> getCities(@RequestParam Long countryId,
-                                        @RequestParam(required = false) String name) {
-        return cityService.getCities(countryId, name);
+    public List<CityResponse> getCities(@RequestParam Long countryId) {
+        return cityService.getCities(countryId);
     }
 }
