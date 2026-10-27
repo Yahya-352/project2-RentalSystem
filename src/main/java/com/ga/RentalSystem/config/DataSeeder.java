@@ -5,23 +5,20 @@ import com.ga.RentalSystem.enums.FuelType;
 import com.ga.RentalSystem.enums.Role;
 import com.ga.RentalSystem.enums.TransmissionType;
 import com.ga.RentalSystem.enums.UserStatus;
-import com.ga.RentalSystem.model.Booking;
-import com.ga.RentalSystem.model.Car;
-import com.ga.RentalSystem.model.Category;
-import com.ga.RentalSystem.model.Make;
-import com.ga.RentalSystem.model.User;
-import com.ga.RentalSystem.repository.BookingRepository;
-import com.ga.RentalSystem.repository.CarRepository;
-import com.ga.RentalSystem.repository.CategoryRepository;
-import com.ga.RentalSystem.repository.MakeRepository;
-import com.ga.RentalSystem.repository.UserRepository;
+import com.ga.RentalSystem.model.*;
+import com.ga.RentalSystem.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -39,6 +36,9 @@ public class DataSeeder implements CommandLineRunner {
     private final CategoryRepository categoryRepository;
     private final CarRepository carRepository;
     private final BookingRepository bookingRepository;
+    private final CountryRepository countryRepository;
+    private final CityRepository cityRepository;
+    private ObjectMapper objectMapper;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${app.admin.email}")
@@ -59,6 +59,23 @@ public class DataSeeder implements CommandLineRunner {
         seedUser("agency", "agency@rental.com", Role.AGENCY);
         seedCars();
         seedBookings();
+    }
+    private List<Country> listCountries(){
+        ClassPathResource resource = new ClassPathResource("data/countries.json");
+        try(InputStream is = resource.getInputStream()) {
+            return objectMapper.readValue(is, new TypeReference<List<Country>>(){});
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    private record countriesCitiesJson(String name , List<String> cities){};
+    private List<countriesCitiesJson> listCities(){
+        ClassPathResource resource = new ClassPathResource("data/cities.json");
+        try(InputStream is = resource.getInputStream()) {
+            return objectMapper.readValue(is, new TypeReference<List<countriesCitiesJson>>(){});
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
     private void seedAdmin(){
         if(userRepository.findByEmail(adminMail).isPresent()){
