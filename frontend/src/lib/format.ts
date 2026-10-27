@@ -22,6 +22,10 @@ export function formatDate(value: string | null | undefined) {
 export const formatDateTime = (value: string | null | undefined) =>
   value ? dateTimeFmt.format(new Date(value)) : '—';
 
+/** "Manama, Bahrain"; tolerates either part missing. */
+export const formatPlace = (city?: string | null, country?: string | null) =>
+  [city, country].filter(Boolean).join(', ') || '—';
+
 export const titleCase = (value: string) =>
   value.charAt(0).toUpperCase() + value.slice(1).toLowerCase().replace(/_/g, ' ');
 

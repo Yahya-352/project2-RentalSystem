@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { errorMessage } from '../../api/client';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ApiError, errorMessage } from '../../api/client';
 import { bookingsApi, carsApi } from '../../api/endpoints';
 import type { CarResponse } from '../../api/types';
 import { useAuth } from '../../auth/AuthContext';
+import { AvailabilityCalendar, isRangeFree } from '../../components/AvailabilityCalendar';
 import { CarGallery } from '../../components/CarPhoto';
-import { EmptyState, ErrorBanner, Field, Spinner } from '../../components/ui';
-import { daysBetween, formatMoney, todayIso, titleCase } from '../../lib/format';
+import { EmptyState, ErrorBanner, Spinner } from '../../components/ui';
+import { daysBetween, formatDate, formatMoney, formatPlace, todayIso, titleCase } from '../../lib/format';
 import { useAsync } from '../../lib/useAsync';
 import { useNotifications } from '../../notifications/NotificationContext';
 
@@ -32,7 +33,7 @@ export function CarDetailPage() {
               {car.make} {car.model} <span className="muted">{car.year}</span>
             </h1>
             <p className="muted">
-              📍 {car.location} · Listed by <strong>{car.ownerUsername}</strong>
+              📍 {formatPlace(car.city, car.country)} · Listed by <strong>{car.ownerUsername}</strong>
             </p>
             <dl className="spec-grid">
               <div>
@@ -81,13 +82,25 @@ export function CarDetailPage() {
 function BookingForm({ car }: { car: CarResponse }) {
   const navigate = useNavigate();
   const { notify } = useNotifications();
-  const [start, setStart] = useState(todayIso(1));
-  const [end, setEnd] = useState(todayIso(3));
+  // Dates chosen on the search page arrive as ?start=...&end=... and start out selected.
+  const [params] = useSearchParams();
+  const [start, setStart] = useState(() => {
+    const s = params.get('start') ?? '';
+    return s >= todayIso() ? s : '';
+  });
+  const [end, setEnd] = useState(() => {
+    const e = params.get('end') ?? '';
+    return start && e > start ? e : '';
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const taken = useAsync(() => bookingsApi.bookedDates(car.id), [car.id]);
+  const booked = taken.data ?? [];
 
-  const days = daysBetween(start, end);
+  const days = start && end ? daysBetween(start, end) : 0;
   const total = days > 0 ? days * Number(car.pricePerDay) : 0;
+  // Pre-selected dates (or a page that went stale) may overlap a booking approved meanwhile.
+  const clash = Boolean(start && end) && !isRangeFree(start, end, booked);
 
   if (!car.available) {
     return (
@@ -100,8 +113,8 @@ function BookingForm({ car }: { car: CarResponse }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (days <= 0) {
-      setError('The return date must be after the pick-up date.');
+    if (!start || !end || days <= 0) {
+      setError('Pick a pick-up day and then a return day on the calendar.');
       return;
     }
     setBusy(true);
@@ -112,6 +125,8 @@ function BookingForm({ car }: { car: CarResponse }) {
       navigate('/bookings');
     } catch (err) {
       setError(errorMessage(err));
+      // 409: someone else's booking was approved for these days after the calendar loaded.
+      if (err instanceof ApiError && err.status === 409) taken.reload();
     } finally {
       setBusy(false);
     }
@@ -123,23 +138,41 @@ function BookingForm({ car }: { car: CarResponse }) {
         {formatMoney(car.pricePerDay)} <small className="muted">/ day</small>
       </h2>
       {error && <div className="alert alert-error">{error}</div>}
-      <div className="grid-2">
-        <Field label="Pick-up">
-          <input
-            type="date"
-            value={start}
-            min={todayIso()}
-            onChange={(e) => {
-              setStart(e.target.value);
-              if (e.target.value >= end) setEnd(e.target.value);
-            }}
-            required
-          />
-        </Field>
-        <Field label="Return">
-          <input type="date" value={end} min={start} onChange={(e) => setEnd(e.target.value)} required />
-        </Field>
-      </div>
+      {taken.error && (
+        <div className="alert alert-warn">
+          Couldn't load the taken dates. You can still request; the agency checks availability.
+        </div>
+      )}
+      {clash && <div className="alert alert-error">These dates overlap an existing booking. Pick other days.</div>}
+
+      {taken.loading && !taken.data ? (
+        <Spinner label="Loading availability…" />
+      ) : (
+        <AvailabilityCalendar
+          booked={booked}
+          start={start}
+          end={end}
+          onChange={(s, e) => {
+            setStart(s);
+            setEnd(e);
+            setError(null);
+          }}
+        />
+      )}
+      <p className="muted small">
+        {!start ? 'Click your pick-up day.' : !end ? 'Now click your return day.' : 'Click any day to start over.'}
+      </p>
+
+      <dl className="spec-grid">
+        <div>
+          <dt>Pick-up</dt>
+          <dd>{formatDate(start)}</dd>
+        </div>
+        <div>
+          <dt>Return</dt>
+          <dd>{formatDate(end)}</dd>
+        </div>
+      </dl>
       <div className="summary">
         <div className="row-between">
           <span className="muted">
@@ -148,7 +181,7 @@ function BookingForm({ car }: { car: CarResponse }) {
           <strong>{formatMoney(total)}</strong>
         </div>
       </div>
-      <button className="btn btn-primary btn-block" disabled={busy || days <= 0}>
+      <button className="btn btn-primary btn-block" disabled={busy || days <= 0 || clash}>
         {busy ? 'Requesting…' : 'Request booking'}
       </button>
       <p className="muted small center">You won't be charged until the agency approves.</p>

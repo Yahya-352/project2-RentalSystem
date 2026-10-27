@@ -2,6 +2,7 @@ import { request } from './client';
 import type {
   AgencyProfileRequest,
   AgencyProfileResponse,
+  BookedDateRange,
   BookingRequest,
   BookingResponse,
   BookingStatus,
@@ -9,6 +10,10 @@ import type {
   CarResponse,
   CategoryResponse,
   ChangePasswordRequest,
+  CityResponse,
+  CountryResponse,
+  FuelType,
+  IsoDate,
   LoginRequest,
   LoginResponse,
   MakeResponse,
@@ -16,6 +21,7 @@ import type {
   RegisterRequest,
   RegisterResponse,
   ResetPasswordRequest,
+  TransmissionType,
   UserProfileRequest,
   UserProfileResponse,
 } from './types';
@@ -41,10 +47,20 @@ export const usersApi = {
   deactivate: (id: number) => request<void>(`/users/${id}/deactivate`, { method: 'PATCH' }),
 };
 
+/** Every filter is optional; the backend combines all the ones that are sent. */
 export interface CarSearch {
-  location?: string;
-  category?: string;
-  make?: string;
+  countryId?: number;
+  cityId?: number;
+  categoryId?: number;
+  makeId?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  minSeats?: number;
+  transmission?: TransmissionType;
+  fuelType?: FuelType;
+  /** Send both or neither: only cars with no approved booking overlapping these dates come back. */
+  startDate?: IsoDate;
+  endDate?: IsoDate;
   page?: number;
   size?: number;
   sort?: string;
@@ -74,6 +90,11 @@ export const catalogApi = {
   categories: () => request<CategoryResponse[]>('/categories'),
 };
 
+export const locationsApi = {
+  countries: () => request<CountryResponse[]>('/countries'),
+  cities: (countryId: number) => request<CityResponse[]>('/cities', { query: { countryId } }),
+};
+
 export const bookingsApi = {
   create: (body: BookingRequest) => request<BookingResponse>('/bookings', { method: 'POST', body }),
   mine: () => request<BookingResponse[]>('/bookings/me'),
@@ -83,6 +104,8 @@ export const bookingsApi = {
   cancel: (id: number) => request<BookingResponse>(`/bookings/${id}/cancel`, { method: 'PATCH' }),
   all: (params: { status?: BookingStatus | ''; page?: number; size?: number; sort?: string }) =>
     request<PageResponse<BookingResponse>>('/bookings', { query: { ...params } }),
+  /** Upcoming approved bookings of a car, for the availability calendar. */
+  bookedDates: (carId: number) => request<BookedDateRange[]>(`/bookings/car/${carId}/dates`),
 };
 
 export const customerProfileApi = {

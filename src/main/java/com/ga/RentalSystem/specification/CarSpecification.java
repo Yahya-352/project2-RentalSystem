@@ -5,14 +5,10 @@ import com.ga.RentalSystem.enums.FuelType;
 import com.ga.RentalSystem.enums.TransmissionType;
 import com.ga.RentalSystem.model.Booking;
 import com.ga.RentalSystem.model.Car;
-import com.ga.RentalSystem.model.City;
-import com.ga.RentalSystem.model.Country;
-import com.stripe.model.tax.Registration;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.awt.print.Book;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 

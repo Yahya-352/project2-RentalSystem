@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import type { CarRequest, CarResponse } from '../api/types';
+import { useEffect, useState } from 'react';
+import type { CarRequest, CarResponse, CountryResponse } from '../api/types';
 import { FUEL_TYPES, TRANSMISSIONS } from '../lib/constants';
 import { titleCase } from '../lib/format';
 import { type Catalog, idByName, useCatalog } from '../lib/useCatalog';
+import { useCities, useCountries } from '../lib/useLocations';
 import { ErrorBanner, Field, Spinner } from './ui';
 
 interface Props {
@@ -14,30 +15,37 @@ interface Props {
 
 const thisYear = new Date().getFullYear();
 
-/** Loads makes and categories from the backend before showing the form. */
+/** Loads makes, categories and countries from the backend before showing the form. */
 export function CarForm(props: Props) {
   const { data: catalog, error, loading, reload } = useCatalog();
+  const countries = useCountries();
 
-  if (loading) return <Spinner label="Loading makes and categories…" />;
+  if (loading || countries.loading) return <Spinner label="Loading form options…" />;
   if (error || !catalog) return <ErrorBanner message={error ?? 'Could not load makes and categories.'} onRetry={reload} />;
-  if (catalog.makes.length === 0 || catalog.categories.length === 0) {
+  if (countries.error || !countries.data) {
+    return <ErrorBanner message={countries.error ?? 'Could not load countries.'} onRetry={countries.reload} />;
+  }
+  if (catalog.makes.length === 0 || catalog.categories.length === 0 || countries.data.length === 0) {
+    const missing = catalog.makes.length === 0 ? 'makes' : catalog.categories.length === 0 ? 'categories' : 'countries';
     return (
       <div className="alert alert-warn">
-        No {catalog.makes.length === 0 ? 'makes' : 'categories'} exist yet. An admin needs to add some before cars can be
-        listed.
+        No {missing} exist yet. An admin needs to add some before cars can be listed.
       </div>
     );
   }
-  return <CarFormFields {...props} catalog={catalog} />;
+  return <CarFormFields {...props} catalog={catalog} countries={countries.data} />;
 }
 
-// CarResponse carries names, not ids, so an existing car's make/category are matched by name.
-function toForm(catalog: Catalog, car?: CarResponse) {
+// CarResponse carries names, not ids, so an existing car's make/category/country are matched by name.
+// Its city is matched once that country's cities have loaded (see CarFormFields).
+function toForm(catalog: Catalog, countries: CountryResponse[], car?: CarResponse) {
+  const defaultCountry = idByName(countries, 'Bahrain') ?? countries[0].id;
   return {
     makeId: String(car ? (idByName(catalog.makes, car.make) ?? '') : catalog.makes[0].id),
     model: car?.model ?? '',
     categoryId: String(car ? (idByName(catalog.categories, car.category) ?? '') : catalog.categories[0].id),
-    location: car?.location ?? '',
+    countryId: String(car ? (idByName(countries, car.country) ?? '') : defaultCountry),
+    cityId: '',
     year: String(car?.year ?? thisYear),
     licensePlate: car?.licensePlate ?? '',
     transmission: car?.transmission ?? TRANSMISSIONS[0],
@@ -47,18 +55,43 @@ function toForm(catalog: Catalog, car?: CarResponse) {
   };
 }
 
-function CarFormFields({ initial, busy, onSubmit, onCancel, catalog }: Props & { catalog: Catalog }) {
-  const [form, setForm] = useState(() => toForm(catalog, initial));
+function CarFormFields({
+  initial,
+  busy,
+  onSubmit,
+  onCancel,
+  catalog,
+  countries,
+}: Props & { catalog: Catalog; countries: CountryResponse[] }) {
+  const [form, setForm] = useState(() => toForm(catalog, countries, initial));
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
+  const cities = useCities(form.countryId ? Number(form.countryId) : null);
+
+  // When editing, select the car's current city by name as soon as its country's cities arrive.
+  const [pendingCity, setPendingCity] = useState(initial?.city ?? null);
+  useEffect(() => {
+    if (!pendingCity || cities.loading || !cities.data) return;
+    const id = idByName(cities.data, pendingCity);
+    if (id) setForm((f) => ({ ...f, cityId: String(id) }));
+    setPendingCity(null);
+  }, [pendingCity, cities.loading, cities.data]);
+
+  const changeCountry = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const countryId = e.target.value;
+    setPendingCity(null);
+    setForm((f) => ({ ...f, countryId, cityId: '' })); // the old city belongs to the old country
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.cityId) return;
     onSubmit({
       makeId: Number(form.makeId),
       model: form.model.trim(),
       categoryId: Number(form.categoryId),
-      location: form.location.trim(),
+      cityId: Number(form.cityId),
       year: Number(form.year),
       licensePlate: form.licensePlate.trim().toUpperCase(),
       transmission: form.transmission,
@@ -98,8 +131,30 @@ function CarFormFields({ initial, busy, onSubmit, onCancel, catalog }: Props & {
             ))}
           </select>
         </Field>
-        <Field label="Location">
-          <input value={form.location} onChange={set('location')} placeholder="e.g. Riyadh" required />
+        <Field label="Country">
+          <select value={form.countryId} onChange={changeCountry} required>
+            <option value="" disabled>
+              Select a country
+            </option>
+            {countries.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="City" hint={cities.error ?? undefined}>
+          <select value={form.cityId} onChange={set('cityId')} required disabled={!form.countryId || cities.loading}>
+            <option value="" disabled>
+              {!form.countryId ? 'Select a country first' : cities.loading ? 'Loading cities…' : 'Select a city'}
+            </option>
+            {!cities.loading &&
+              (cities.data ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+          </select>
         </Field>
         <Field label="Year">
           <input type="number" min={1980} max={2100} value={form.year} onChange={set('year')} required />
@@ -144,7 +199,7 @@ function CarFormFields({ initial, busy, onSubmit, onCancel, catalog }: Props & {
         <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={busy}>
           Cancel
         </button>
-        <button className="btn btn-primary" disabled={busy}>
+        <button className="btn btn-primary" disabled={busy || !form.cityId}>
           {busy ? 'Saving…' : initial ? 'Save changes' : 'Add car'}
         </button>
       </div>

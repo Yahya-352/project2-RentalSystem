@@ -39,7 +39,8 @@ export interface CarRequest {
   makeId: number;
   model: string;
   categoryId: number;
-  location: string;
+  /** From GET /cities?countryId=...; the backend no longer accepts a free-text location. */
+  cityId: number;
   year: number;
   licensePlate: string;
   transmission: TransmissionType;
@@ -92,7 +93,8 @@ export interface CarResponse {
   make: string;
   model: string;
   category: string;
-  location: string;
+  city: string;
+  country: string;
   year: number;
   licensePlate: string;
   transmission: TransmissionType;
@@ -151,6 +153,26 @@ export interface MakeResponse {
 export interface CategoryResponse {
   id: number;
   name: string;
+}
+
+export interface CountryResponse {
+  id: number;
+  name: string;
+  iso2: string;
+}
+
+export interface CityResponse {
+  id: number;
+  name: string;
+}
+
+/**
+ * An approved booking's dates, from GET /bookings/car/{carId}/dates. The car is taken from
+ * startDate up to, but not including, endDate: the return day is free for the next pick-up.
+ */
+export interface BookedDateRange {
+  startDate: IsoDate;
+  endDate: IsoDate;
 }
 
 export interface PageResponse<T> {

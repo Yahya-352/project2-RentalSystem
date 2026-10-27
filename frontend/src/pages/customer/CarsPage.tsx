@@ -1,16 +1,64 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { carsApi } from '../../api/endpoints';
-import type { CarResponse } from '../../api/types';
+import { type CarSearch, carsApi } from '../../api/endpoints';
+import type { CarResponse, FuelType, TransmissionType } from '../../api/types';
 import { CarCarousel } from '../../components/CarPhoto';
-import { EmptyState, ErrorBanner, PageHeader, Pagination, Spinner } from '../../components/ui';
+import { EmptyState, ErrorBanner, Field, PageHeader, Pagination, Spinner } from '../../components/ui';
+import { FUEL_TYPES, TRANSMISSIONS } from '../../lib/constants';
 import { useCatalog } from '../../lib/useCatalog';
-import { formatMoney, titleCase } from '../../lib/format';
+import { useCities, useCountries } from '../../lib/useLocations';
+import { formatDate, formatMoney, formatPlace, titleCase, todayIso } from '../../lib/format';
 import { useAsync } from '../../lib/useAsync';
 
-// The backend applies only ONE filter per request (location, else category, else make),
-// so the UI lets the user pick one filter at a time instead of pretending to combine them.
-type FilterKey = 'location' | 'category' | 'make';
+// Every filter is optional and the backend combines all the ones that are sent.
+// They live in the URL, so a search survives a reload and can be shared.
+const FILTER_KEYS = [
+  'startDate',
+  'endDate',
+  'countryId',
+  'cityId',
+  'categoryId',
+  'makeId',
+  'transmission',
+  'fuelType',
+  'minSeats',
+  'minPrice',
+  'maxPrice',
+] as const;
+type FilterKey = (typeof FILTER_KEYS)[number];
+type Filters = Record<FilterKey, string>;
+
+const readFilters = (params: URLSearchParams) =>
+  Object.fromEntries(FILTER_KEYS.map((k) => [k, params.get(k) ?? ''])) as Filters;
+
+const num = (value: string) => (value === '' ? undefined : Number(value));
+
+function toSearch(f: Filters): CarSearch {
+  return {
+    startDate: f.startDate || undefined,
+    endDate: f.endDate || undefined,
+    countryId: num(f.countryId),
+    cityId: num(f.cityId),
+    categoryId: num(f.categoryId),
+    makeId: num(f.makeId),
+    transmission: (f.transmission || undefined) as TransmissionType | undefined,
+    fuelType: (f.fuelType || undefined) as FuelType | undefined,
+    minSeats: num(f.minSeats),
+    minPrice: num(f.minPrice),
+    maxPrice: num(f.maxPrice),
+  };
+}
+
+/** The same rules the backend enforces, checked here so the user doesn't wait for a 400. */
+function validate(f: Filters): string | null {
+  if (Boolean(f.startDate) !== Boolean(f.endDate)) return 'Pick both a pick-up and a return date.';
+  if (f.startDate && f.startDate < todayIso()) return "The pick-up date can't be in the past.";
+  if (f.startDate && f.endDate <= f.startDate) return 'The return date must be after the pick-up date.';
+  if (f.minPrice && f.maxPrice && Number(f.minPrice) > Number(f.maxPrice)) {
+    return "The minimum price can't be higher than the maximum.";
+  }
+  return null;
+}
 
 const SORTS = [
   { value: 'createdAt,desc', label: 'Newest' },
@@ -23,14 +71,19 @@ const PAGE_SIZE = 12;
 
 export function CarsPage() {
   const [params, setParams] = useSearchParams();
-  const filterKey = (params.get('by') as FilterKey) || 'location';
-  const filterValue = params.get('q') ?? '';
+  const applied = readFilters(params);
+  const appliedKey = FILTER_KEYS.map((k) => applied[k]).join('|');
   const sort = params.get('sort') ?? SORTS[0].value;
   const page = Number(params.get('page') ?? 0);
 
   const { data: catalog } = useCatalog();
-  const [draft, setDraft] = useState(filterValue);
-  useEffect(() => setDraft(filterValue), [filterValue]);
+  const { data: countries } = useCountries();
+
+  // The form edits a draft; nothing is searched until the user presses Search.
+  const [draft, setDraft] = useState<Filters>(applied);
+  const [formError, setFormError] = useState<string | null>(null);
+  useEffect(() => setDraft(readFilters(params)), [appliedKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const cities = useCities(num(draft.countryId));
 
   const update = (next: Record<string, string | null>) => {
     const p = new URLSearchParams(params);
@@ -42,82 +95,173 @@ export function CarsPage() {
   };
 
   const { data, error, loading, reload } = useAsync(
-    () =>
-      carsApi.search({
-        [filterKey]: filterValue || undefined,
-        page,
-        size: PAGE_SIZE,
-        sort,
-      }),
-    [filterKey, filterValue, page, sort],
+    () => carsApi.search({ ...toSearch(applied), page, size: PAGE_SIZE, sort }),
+    [appliedKey, page, sort],
   );
 
-  const applyText = (e: React.FormEvent) => {
+  const set = (key: FilterKey) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setDraft((d) => ({ ...d, [key]: e.target.value }));
+
+  const apply = (e: React.FormEvent) => {
     e.preventDefault();
-    update({ q: draft.trim(), page: null });
+    const problem = validate(draft);
+    setFormError(problem);
+    if (!problem) update({ ...draft, page: null });
   };
+
+  const clear = () => {
+    setFormError(null);
+    update({ ...Object.fromEntries(FILTER_KEYS.map((k) => [k, null])), page: null });
+  };
+
+  const activeCount = FILTER_KEYS.filter((k) => applied[k] !== '').length;
+  const datesChosen = Boolean(applied.startDate && applied.endDate);
+  // Carry the dates to the car page so its booking calendar starts with them selected.
+  const carLinkSearch = datesChosen ? `?start=${applied.startDate}&end=${applied.endDate}` : '';
 
   return (
     <>
-      <PageHeader title="Find a car" subtitle="Browse available cars from rental agencies." />
+      <PageHeader
+        title="Find a car"
+        subtitle={
+          datesChosen
+            ? `Cars free from ${formatDate(applied.startDate)} to ${formatDate(applied.endDate)}.`
+            : 'Browse available cars from rental agencies.'
+        }
+      />
 
-      <div className="toolbar card">
-        <div className="segmented small-seg" role="tablist" aria-label="Filter by">
-          {(['location', 'category', 'make'] as const).map((k) => (
-            <button
-              key={k}
-              role="tab"
-              aria-selected={filterKey === k}
-              className={filterKey === k ? 'active' : ''}
-              onClick={() => update({ by: k, q: null, page: null })}
+      <form className="card filters-card" onSubmit={apply}>
+        <div className="filters">
+          <Field label="Pick-up">
+            <input
+              type="date"
+              value={draft.startDate}
+              min={todayIso()}
+              onChange={(e) => {
+                const startDate = e.target.value;
+                // A return date on or before the new pick-up date no longer makes sense.
+                setDraft((d) => ({ ...d, startDate, endDate: d.endDate && d.endDate <= startDate ? '' : d.endDate }));
+              }}
+            />
+          </Field>
+          <Field label="Return">
+            <input
+              type="date"
+              value={draft.endDate}
+              min={draft.startDate || todayIso(1)}
+              onChange={set('endDate')}
+            />
+          </Field>
+          <Field label="Country">
+            <select
+              value={draft.countryId}
+              onChange={(e) => setDraft((d) => ({ ...d, countryId: e.target.value, cityId: '' }))}
             >
-              {titleCase(k)}
-            </button>
-          ))}
+              <option value="">{countries ? 'Any country' : 'Loading…'}</option>
+              {(countries ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="City">
+            <select value={draft.cityId} onChange={set('cityId')} disabled={!draft.countryId || cities.loading}>
+              <option value="">
+                {!draft.countryId ? 'Pick a country first' : cities.loading ? 'Loading…' : 'Any city'}
+              </option>
+              {!cities.loading &&
+                (cities.data ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+            </select>
+          </Field>
+          <Field label="Category">
+            <select value={draft.categoryId} onChange={set('categoryId')}>
+              <option value="">{catalog ? 'Any category' : 'Loading…'}</option>
+              {(catalog?.categories ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Make">
+            <select value={draft.makeId} onChange={set('makeId')}>
+              <option value="">{catalog ? 'Any make' : 'Loading…'}</option>
+              {(catalog?.makes ?? []).map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Transmission">
+            <select value={draft.transmission} onChange={set('transmission')}>
+              <option value="">Any</option>
+              {TRANSMISSIONS.map((t) => (
+                <option key={t} value={t}>
+                  {titleCase(t)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Fuel">
+            <select value={draft.fuelType} onChange={set('fuelType')}>
+              <option value="">Any</option>
+              {FUEL_TYPES.map((f) => (
+                <option key={f} value={f}>
+                  {titleCase(f)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Seats (at least)">
+            <input type="number" min={1} max={20} value={draft.minSeats} onChange={set('minSeats')} placeholder="Any" />
+          </Field>
+          <Field label="Min price / day">
+            <input
+              type="number"
+              min={0}
+              step="0.001"
+              value={draft.minPrice}
+              onChange={set('minPrice')}
+              placeholder="0.000"
+            />
+          </Field>
+          <Field label="Max price / day">
+            <input
+              type="number"
+              min={0.001}
+              step="0.001"
+              value={draft.maxPrice}
+              onChange={set('maxPrice')}
+              placeholder="Any"
+            />
+          </Field>
         </div>
 
-        {filterKey === 'location' ? (
-          <form onSubmit={applyText} className="search">
-            <input
-              type="search"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder="City, e.g. Riyadh"
-              aria-label="Location"
-            />
-            <button className="btn btn-primary">Search</button>
-          </form>
-        ) : (
-          <select
-            value={filterValue}
-            onChange={(e) => update({ q: e.target.value, page: null })}
-            aria-label={titleCase(filterKey)}
-          >
-            <option value="">
-              {catalog ? `All ${filterKey === 'make' ? 'makes' : 'categories'}` : 'Loading…'}
-            </option>
-            {(filterKey === 'make' ? (catalog?.makes ?? []) : (catalog?.categories ?? [])).map((o) => (
-              <option key={o.id} value={o.name}>
-                {o.name}
+        {formError && <div className="alert alert-error">{formError}</div>}
+
+        <div className="filters-actions">
+          <button className="btn btn-primary">Search</button>
+          {activeCount > 0 && (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={clear}>
+              Clear filters ({activeCount})
+            </button>
+          )}
+          <span className="spacer" />
+          <select value={sort} onChange={(e) => update({ sort: e.target.value, page: null })} aria-label="Sort">
+            {SORTS.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
               </option>
             ))}
           </select>
-        )}
-
-        <select value={sort} onChange={(e) => update({ sort: e.target.value, page: null })} aria-label="Sort">
-          {SORTS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
-
-        {filterValue && (
-          <button className="btn btn-ghost btn-sm" onClick={() => update({ q: null, page: null })}>
-            Clear filter
-          </button>
-        )}
-      </div>
+        </div>
+      </form>
 
       {error ? (
         <ErrorBanner message={error} onRetry={reload} />
@@ -125,14 +269,14 @@ export function CarsPage() {
         <Spinner label="Loading cars…" />
       ) : data && data.content.length === 0 ? (
         <EmptyState title="No cars match">
-          {filterValue ? 'Try a different filter.' : 'No agency has listed a car yet.'}
+          {activeCount > 0 ? 'Try changing or clearing some filters.' : 'No agency has listed a car yet.'}
         </EmptyState>
       ) : (
         data && (
           <>
             <div className={`car-grid ${loading ? 'is-loading' : ''}`}>
               {data.content.map((car) => (
-                <CarCard key={car.id} car={car} />
+                <CarCard key={car.id} car={car} linkSearch={carLinkSearch} />
               ))}
             </div>
             <Pagination
@@ -153,9 +297,18 @@ export function CarsPage() {
  * photo or the text opens the car. The photo area is kept outside the <Link> so its arrow buttons
  * aren't nested inside a link.
  */
-export function CarCard({ car, actions }: { car: CarResponse; actions?: React.ReactNode }) {
+export function CarCard({
+  car,
+  actions,
+  linkSearch = '',
+}: {
+  car: CarResponse;
+  actions?: React.ReactNode;
+  /** Appended to the car's link, e.g. "?start=...&end=..." to pre-select dates. */
+  linkSearch?: string;
+}) {
   const navigate = useNavigate();
-  const href = `/cars/${car.id}`;
+  const href = `/cars/${car.id}${linkSearch}`;
 
   const photos = (
     <CarCarousel
@@ -176,7 +329,7 @@ export function CarCard({ car, actions }: { car: CarResponse; actions?: React.Re
           </h3>
           <span className="muted">{car.year}</span>
         </div>
-        <p className="muted small">📍 {car.location}</p>
+        <p className="muted small">📍 {formatPlace(car.city, car.country)}</p>
         <ul className="specs">
           <li>{titleCase(car.transmission)}</li>
           <li>{titleCase(car.fuelType)}</li>
