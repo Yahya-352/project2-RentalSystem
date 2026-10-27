@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -128,6 +129,17 @@ public class CarService {
     }
 
     private Specification<Car> buildSpecification(CarSearchRequest request){
+        if ((request.startDate() == null) != (request.endDate() == null)) {
+            throw new BadRequestException("startDate and endDate must be given together");
+        }
+        if (request.startDate() != null) {
+            if (!request.startDate().isBefore(request.endDate())) {
+                throw new BadRequestException("startDate must be before endDate");
+            }
+            if (request.startDate().isBefore(LocalDate.now())) {
+                throw new BadRequestException("startDate cannot be in the past");
+            }
+        }
         Specification<Car> spec = notDeleted();
         if (request.cityId() != null) {
             spec = spec.and(hasCity(request.cityId()));
@@ -155,6 +167,9 @@ public class CarService {
         }
         if (request.minSeats() != null) {
             spec = spec.and(minSeats(request.minSeats()));
+        }
+        if (request.startDate() != null && request.endDate() != null) {
+            spec = spec.and(availableBetween(request.startDate(), request.endDate()));
         }
         return spec;
     }

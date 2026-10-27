@@ -1,13 +1,20 @@
 package com.ga.RentalSystem.specification;
 
+import com.ga.RentalSystem.enums.BookingStatus;
 import com.ga.RentalSystem.enums.FuelType;
 import com.ga.RentalSystem.enums.TransmissionType;
+import com.ga.RentalSystem.model.Booking;
 import com.ga.RentalSystem.model.Car;
 import com.ga.RentalSystem.model.City;
 import com.ga.RentalSystem.model.Country;
+import com.stripe.model.tax.Registration;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.awt.print.Book;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 public class CarSpecification {
 
@@ -56,6 +63,22 @@ public class CarSpecification {
     public static Specification<Car> minSeats(Integer minSeats){
         return ((root, query, cb) ->
                 cb.greaterThanOrEqualTo(root.get("seats"), minSeats));
+    }
+    public static Specification<Car> availableBetween(LocalDate startDate, LocalDate endDate){
+        return (root, query, cb) -> {
+            Subquery<Long> subquery = query.subquery(Long.class);
+            Root<Booking> bookings = subquery.from(Booking.class);
+
+            subquery.select(bookings.get("id"));
+
+            subquery.where(
+                    cb.equal(bookings.get("car") , root),
+                    cb.equal(bookings.get("status") , BookingStatus.APPROVED),
+                    cb.lessThan(bookings.get("startDate") ,endDate),
+                    cb.greaterThan(bookings.get("endDate") ,startDate));
+
+            return cb.not(cb.exists(subquery)); //return cars that do not exist in subquery
+        };
     }
 
 }
