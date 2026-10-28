@@ -305,8 +305,11 @@ Secrets are not stored in the repository. Set these variables before starting th
 | `SMTP_PASSWORD` | Mail server password |
 | `ADMIN_USERNAME` | Email address of the admin account created on first start, for example `admin@rental.com` |
 | `ADMIN_PASSWORD` | Password of that admin account, for example `Admin123!` |
+| `STRIPE_TEST_SECRET_KEY` | Stripe test secret key (`sk_test_...`), used to create checkout sessions and refunds. See [Stripe setup](#stripe-setup-test-mode) |
+| `STRIPE_WEB_HOOK_SECRET` | Webhook signing secret (`whsec_...`) printed by `stripe listen`. See [Stripe setup](#stripe-setup-test-mode) |
+| `FRONTEND_URL` | Optional. Where Stripe sends the user back after paying (defaults to `http://localhost:5173`) |
 
-All of these are required except `DB_USERNAME`. If `JWT_SECRET`, `ADMIN_USERNAME` or `ADMIN_PASSWORD` is missing, the application stops at startup with `Could not resolve placeholder '...'`. A missing `DB_PASSWORD` stops it with a database login error, and missing `SMTP_*` values only show up later, when registration or password-reset emails fail to send.
+All of these are required except `DB_USERNAME` and `FRONTEND_URL`. If `JWT_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `STRIPE_TEST_SECRET_KEY` or `STRIPE_WEB_HOOK_SECRET` is missing, the application stops at startup with `Could not resolve placeholder '...'`. A missing `DB_PASSWORD` stops it with a database login error, and missing `SMTP_*` values only show up later, when registration or password-reset emails fail to send.
 
 The mail settings point to a [Mailtrap](https://mailtrap.io) sandbox inbox. Create a free inbox there and copy its SMTP username and password. Verification and password recovery emails will appear in the Mailtrap inbox instead of being sent to real addresses.
 
@@ -331,6 +334,8 @@ $env:SMTP_USERNAME = "your-mailtrap-username"
 $env:SMTP_PASSWORD = "your-mailtrap-password"
 $env:ADMIN_USERNAME = "admin@rental.com"
 $env:ADMIN_PASSWORD = "Admin123!"
+$env:STRIPE_TEST_SECRET_KEY = "sk_test_..."
+$env:STRIPE_WEB_HOOK_SECRET = "whsec_..."
 ```
 
 macOS / Linux:
@@ -342,11 +347,29 @@ export SMTP_USERNAME="your-mailtrap-username"
 export SMTP_PASSWORD="your-mailtrap-password"
 export ADMIN_USERNAME="admin@rental.com"
 export ADMIN_PASSWORD="Admin123!"
+export STRIPE_TEST_SECRET_KEY="sk_test_..."
+export STRIPE_WEB_HOOK_SECRET="whsec_..."
 ```
 
 Variables set this way only last for the current terminal window, so start the application from that same window.
 
 In IntelliJ IDEA, add them under **Run → Edit Configurations → Environment variables** instead.
+
+#### Stripe setup (test mode)
+
+Payments use Stripe in **test mode**, so no real money moves and no business details are needed.
+
+1. Create a free account at [stripe.com](https://stripe.com). New accounts start in test mode.
+2. Go to **Developers → API keys** and copy the **Secret key** (`sk_test_...`) into `STRIPE_TEST_SECRET_KEY`.
+3. Install the [Stripe CLI](https://docs.stripe.com/stripe-cli) and forward webhooks to the app:
+   ```bash
+   stripe login
+   stripe listen --forward-to localhost:8080/pay/webhook
+   ```
+   It prints a signing secret (`whsec_...`). Put it in `STRIPE_WEB_HOOK_SECRET`, then start the application. Keep `stripe listen` running while you test.
+4. Pay with the test card `4242 4242 4242 4242`, any future expiry date and any CVC.
+
+Both Stripe variables must be set for the application to start. Everything except payments works without `stripe listen`. Without it you can still open the Stripe payment page, but the booking is never marked **Paid**, and because only paid bookings are refunded, cancelling it does not refund anything.
 
 ### 5. Seed the database
 
@@ -354,6 +377,7 @@ Seeding runs automatically every time the application starts, and it only create
 
 - The admin account, using `ADMIN_USERNAME` and `ADMIN_PASSWORD`
 - The car categories and makes
+- The GCC countries (Bahrain, Kuwait, Oman, Qatar, Saudi Arabia, United Arab Emirates) and their cities, read from `src/main/resources/data/countries.json` and `countries+cities.json`. Every car must be in one of these cities.
 - One test customer and one test agency (both already verified and active)
 - Six sample cars owned by the test agency (license plates `SEED-001` to `SEED-006`)
 - Six sample bookings by the test customer, covering every booking status
@@ -414,11 +438,36 @@ A new agency account has to be approved before it can log in: register it with `
 
 Open `http://localhost:8080/swagger-ui/index.html` in your browser. See [API Documentation](#api-documentation) for how to authorize requests.
 
+### 9. Run the frontend
+
+The React web app is in the `frontend/` folder. It needs **Node.js 18 or newer** (check with `node -v`) and the backend from step 6 running.
+
+Open a **second terminal** (keep the backend running in the first one):
+
+```bash
+cd frontend
+npm install    # first time only
+npm run dev
+```
+
+Open **http://localhost:5173** and log in with one of the seeded accounts from step 5 (the login page has one-click buttons for them). The frontend sends its API calls to `http://localhost:8080`; if your backend runs somewhere else, copy `frontend/.env.example` to `frontend/.env` and change `BACKEND_URL`. More details are in [`frontend/README.md`](frontend/README.md).
+
+### 10. Try the whole flow
+
+With the backend, the frontend and `stripe listen` running:
+
+1. Log in as the **customer**, search for a car with a pick-up and return date, open it and press **Request booking**.
+2. Log in as the **agency** (another browser or a private window) and press **Approve** under **Booking requests**. The customer gets a live notification.
+3. As the customer, open **My bookings**, press **Pay now**, and pay with `4242 4242 4242 4242`. The booking turns **Paid**.
+4. Cancel the booking. The payment is refunded automatically and the booking shows **Refunded**.
+
 ### Run the tests
 
 ```bash
 ./mvnw test
 ```
+
+Run the tests from a terminal where the environment variables from step 4 are set (or from IntelliJ with the same run configuration). The tests use both databases from step 3: most tests start the application with the default `dev` profile (`RentalSystemSeeded`), and the concurrency integration test (`BookingControllerConcurrencyIntegrationTest`) uses the `test` profile, so the `"RentalSystem"` database must exist too. The integration test creates its own users and car, so it does not need any seeded data.
 
 ---
 
@@ -448,9 +497,7 @@ Open `http://localhost:8080/swagger-ui/index.html` in your browser. See [API Doc
 ## Future Improvements
 
 - Rate limiting with Redis
-- Stripe for payments
-- Advanced search for cars based on dates
-- Docker and integration tests
+- Docker
 - JSON responses everywhere
 - Reviews and ratings
 
