@@ -24,6 +24,7 @@ public class bookingScheduler {
 
     @Scheduled(cron = "0 0 12 * * ?")
     public void rejectBooking() {
-        
+        bookingRepository.rejectUnApprovedBookings
+                (BookingStatus.PENDING , BookingStatus.REJECTED , LocalDate.now() );
     }
 }

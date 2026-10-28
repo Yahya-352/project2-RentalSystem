@@ -39,4 +39,12 @@ public interface BookingRepository extends JpaRepository<Booking , Long> {
        """)
     int completeFinishedBookings(BookingStatus approved, BookingStatus completed, LocalDate today);
 
+    @Modifying
+    @Query("""
+       update Booking b
+       set b.status = :rejected, b.updatedAt = CURRENT_TIMESTAMP
+       where b.status = :pending and b.endDate < :today
+       """)
+    int rejectUnApprovedBookings(BookingStatus pending, BookingStatus rejected, LocalDate today);
+
 }
