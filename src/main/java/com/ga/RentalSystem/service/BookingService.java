@@ -48,6 +48,7 @@ public class BookingService {
 
     private final NotificationService notificationService;
     private final AuditLogService auditLogService;
+    private final StripeService stripeService;
 
     /**
      * Creates a booking request for a car. The total price is the car's price per day
@@ -273,6 +274,10 @@ public class BookingService {
         auditLogService.log(currentUser.getId(), "BOOKING_CANCELLED", "Booking", booking.getId(), message);
 
         booking.setStatus(BookingStatus.CANCELLED);
+        if(booking.isPaid()){
+            stripeService.refund(booking);
+            booking.setRefunded(true);
+        }
         return toResponse(bookingRepository.save(booking));
     }
 
@@ -361,7 +366,8 @@ public class BookingService {
                 booking.getStatus(),
                 booking.getCreatedAt(),
                 booking.getUpdatedAt(),
-                booking.isPaid()
+                booking.isPaid(),
+                booking.isRefunded()
         );
     }
 

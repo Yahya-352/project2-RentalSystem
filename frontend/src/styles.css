@@ -1553,3 +1553,8 @@ textarea:focus {
 .center-actions {
   justify-content: center;
 }
+.badge-refunded {
+  background: var(--info-soft);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}

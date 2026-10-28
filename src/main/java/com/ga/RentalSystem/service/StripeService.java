@@ -17,6 +17,8 @@ import com.stripe.StripeClient;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
 
+import com.stripe.net.RequestOptions;
+import com.stripe.param.RefundCreateParams;
 import com.stripe.param.checkout.SessionCreateParams;
 import com.stripe.model.checkout.Session;
 import jakarta.transaction.Transactional;
@@ -139,6 +141,7 @@ public class StripeService {
             if(payment.getStatus().equals(PaymentStatus.PENDING)){
                 if(event.getType().equals("checkout.session.completed")
                         && sessionRetrieved.getPaymentStatus().equals("paid")){
+                    payment.setPaymentIntent(sessionRetrieved.getPaymentIntent());
                     payment.setStatus(PaymentStatus.PAID);
                     payment.getBooking().setPaid(true);
 
@@ -151,5 +154,24 @@ public class StripeService {
             log.error("Payment Not Found");
         }
 
+    }
+
+    public void refund(Booking booking){
+        Payment payment = paymentRepository.findByBookingIdAndStatus(booking.getId(), PaymentStatus.PAID)
+                .orElseThrow(() -> new InformationNotFoundException("No paid payment for this booking"));
+        RefundCreateParams params = RefundCreateParams.builder()
+                .setPaymentIntent(payment.getPaymentIntent())
+                .build();
+        RequestOptions options = RequestOptions.builder()
+                .setIdempotencyKey("refund-booking-" + booking.getId())
+                .build();
+        try {
+            stripeClient.v1().refunds().create(params, options);
+            booking.setPaid(false);
+            payment.setStatus(PaymentStatus.REFUNDED);
+
+        } catch (StripeException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

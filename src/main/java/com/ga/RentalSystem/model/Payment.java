@@ -1,6 +1,7 @@
 package com.ga.RentalSystem.model;
 
 import com.ga.RentalSystem.enums.PaymentStatus;
+import com.stripe.model.PaymentIntent;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -30,4 +31,7 @@ public class Payment {
 
     @Column(nullable = false , unique = true)
     private String sessionId;
+
+    @Column
+    private String paymentIntent;
 }

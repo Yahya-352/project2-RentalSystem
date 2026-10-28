@@ -52,8 +52,9 @@ export function StatusBadge({ status }: { status: BookingStatus | string }) {
   return <span className={`badge badge-${status.toLowerCase()}`}>{titleCase(status)}</span>;
 }
 
-/** Shown next to the status once the Stripe payment for the booking has gone through. */
-export function PaidBadge({ paid }: { paid: boolean }) {
+/** Shown next to the status: "Paid ✓" once the Stripe payment went through, "Refunded" after a refund. */
+export function PaidBadge({ paid, refunded }: { paid: boolean; refunded?: boolean }) {
+  if (refunded) return <span className="badge badge-refunded">Refunded</span>;
   return paid ? <span className="badge badge-paid">Paid ✓</span> : null;
 }
 

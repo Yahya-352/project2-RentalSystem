@@ -18,5 +18,6 @@ public record BookingResponse(
         BookingStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
-        boolean paid
+        boolean paid,
+        boolean refunded
 ) {}

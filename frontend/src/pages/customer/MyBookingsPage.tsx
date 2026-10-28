@@ -55,7 +55,8 @@ export function MyBookingsPage() {
     try {
       const updated = await bookingsApi.cancel(cancelling.id);
       setData((list) => list?.map((b) => (b.id === updated.id ? updated : b)));
-      notify('Booking cancelled.', 'success');
+      // The backend refunds paid bookings as part of the cancellation (StripeService.refund).
+      notify(cancelling.paid ? 'Booking cancelled and your payment refunded.' : 'Booking cancelled.', 'success');
       setCancelling(null);
     } catch (err) {
       notify(errorMessage(err), 'error');
@@ -98,7 +99,7 @@ export function MyBookingsPage() {
                     </Link>
                   </h3>
                   <StatusBadge status={b.status} />
-                  <PaidBadge paid={b.paid} />
+                  <PaidBadge paid={b.paid} refunded={b.refunded} />
                 </div>
                 <p className="muted small">
                   {formatDate(b.startDate)} → {formatDate(b.endDate)} · {daysBetween(b.startDate, b.endDate)} days ·
@@ -137,7 +138,8 @@ export function MyBookingsPage() {
               {cancelling.paid && (
                 <>
                   {' '}
-                  <strong>You've already paid for it:</strong> refunds aren't automatic, so contact the agency.
+                  <strong>You've paid for this booking, so the full amount will be refunded to your card.</strong>{' '}
+                  Refunds usually take 5–10 business days to appear on your statement.
                 </>
               )}
             </>

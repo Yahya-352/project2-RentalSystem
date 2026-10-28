@@ -43,6 +43,8 @@ public class Booking {
     @Column(nullable = false, columnDefinition = "boolean default false")
     private boolean paid;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean refunded;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

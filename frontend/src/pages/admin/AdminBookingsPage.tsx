@@ -83,7 +83,7 @@ export function AdminBookingsPage() {
                     <td className="num">{formatMoney(b.totalPrice)}</td>
                     <td>
                       <StatusBadge status={b.status} />
-                      <PaidBadge paid={b.paid} />
+                      <PaidBadge paid={b.paid} refunded={b.refunded} />
                     </td>
                     <td className="muted small">{formatDateTime(b.createdAt)}</td>
                   </tr>

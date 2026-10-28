@@ -119,7 +119,7 @@ export function AgencyBookingsPage() {
                   <td className="num">{formatMoney(b.totalPrice)}</td>
                   <td>
                     <StatusBadge status={b.status} />
-                    <PaidBadge paid={b.paid} />
+                    <PaidBadge paid={b.paid} refunded={b.refunded} />
                   </td>
                   <td className="actions">
                     {b.status === 'PENDING' && (

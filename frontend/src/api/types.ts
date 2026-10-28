@@ -123,6 +123,8 @@ export interface BookingResponse {
   updatedAt: IsoDateTime;
   /** Set by the Stripe webhook once the payment for this booking succeeds. */
   paid: boolean;
+  /** True once a paid booking was cancelled and its payment refunded (sent by the backend once added). */
+  refunded?: boolean;
 }
 
 /** From POST /pay/{bookingId}: a Stripe Checkout session to send the customer to. */
