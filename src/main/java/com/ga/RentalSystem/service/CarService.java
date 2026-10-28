@@ -57,11 +57,11 @@ public class CarService {
      * Creates a new car listing owned by the logged-in user.
      * The car starts as available, and the action is written to the audit log.
      *
-     * @param carRequest     the car details (make, category, model, location, year, plate,
+     * @param carRequest     the car details (make, category, model, city, year, plate,
      *                       transmission, fuel type, seats and price per day)
      * @param authentication the logged-in user, who becomes the owner of the car
      * @return the created car
-     * @throws InformationNotFoundException if the user, make or category does not exist
+     * @throws InformationNotFoundException if the user, make, category or city does not exist
      * @throws BadRequestException          if the transmission or fuel type is not a valid value
      */
     public CarResponse createCar(CarRequest carRequest ,
@@ -109,13 +109,17 @@ public class CarService {
     }
 
     /**
-     * Returns a page of cars that have not been deleted.
-     * Only one filter is applied at a time, in this order: city, then category, then make.
-     * If none is given, all non-deleted cars are returned.
+     * Searches the cars that have not been deleted.
+     * Every filter in the request is optional, and all the ones that are given are combined
+     * (city, country, category, make, price range, transmission, fuel type, minimum seats and
+     * availability between two dates). With no filters, all non-deleted cars are returned.
      *
-
+     * @param request  the search filters; any of them may be {@code null}
      * @param pageable the page number, page size and sorting
-     * @return a page of cars
+     * @return a page of matching cars
+     * @throws BadRequestException if minPrice is greater than maxPrice, only one of the dates is
+     *                             given, the start date is not before the end date, or the start
+     *                             date is in the past
      */
     public PageResponse<CarResponse> getCars(CarSearchRequest request, Pageable pageable) {
         if (request.minPrice() != null && request.maxPrice() != null
@@ -128,6 +132,14 @@ public class CarService {
         return PageResponse.from(responsePage);
     }
 
+    /**
+     * Turns the search request into one JPA {@link Specification}: it starts from "not deleted"
+     * and adds one condition for every filter that was sent (see {@link CarSpecification}).
+     *
+     * @param request the search filters
+     * @return the combined specification
+     * @throws BadRequestException if the dates are missing one side, not in order, or in the past
+     */
     private Specification<Car> buildSpecification(CarSearchRequest request){
         if ((request.startDate() == null) != (request.endDate() == null)) {
             throw new BadRequestException("startDate and endDate must be given together");
@@ -211,7 +223,7 @@ public class CarService {
      * @param carRequest     the new car details
      * @param authentication the logged-in user, who must be the owner
      * @return the updated car
-     * @throws InformationNotFoundException if the user, car, make or category does not exist,
+     * @throws InformationNotFoundException if the user, car, make, category or city does not exist,
      *                                      or the car has been deleted
      * @throws ForbiddenException           if the car belongs to another user
      * @throws BadRequestException          if the transmission or fuel type is not a valid value

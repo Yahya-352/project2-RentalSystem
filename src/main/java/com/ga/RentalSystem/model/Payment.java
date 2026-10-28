@@ -1,7 +1,6 @@
 package com.ga.RentalSystem.model;
 
 import com.ga.RentalSystem.enums.PaymentStatus;
-import com.stripe.model.PaymentIntent;
 import jakarta.persistence.*;
 import lombok.Data;
 

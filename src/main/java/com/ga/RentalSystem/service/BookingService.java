@@ -109,6 +109,17 @@ public class BookingService {
         auditLogService.log(renter.getId(), "BOOKING_CREATED", "Booking", saved.getId(), message);
         return response;
     }
+
+    /**
+     * Returns the dates a car is already taken, for the booking calendar: the approved
+     * bookings of the car that have not ended yet, in date order. Only the dates are
+     * returned, never who booked the car or the price.
+     *
+     * @param carId the id of the car
+     * @return the taken date ranges; each one blocks its start date up to, but not including,
+     *         its end date (the return day is free for the next pick-up)
+     * @throws InformationNotFoundException if the car does not exist or has been deleted
+     */
     public List<BookingCalenderDatesResponse> getBookedDates(Long carId){
         Car car = carRepository.findById(carId).orElseThrow(
                 () -> new InformationNotFoundException("Car not found"));
@@ -240,13 +251,16 @@ public class BookingService {
 
     /**
      * Cancels a booking. Either the renter or the owner of the car can cancel it, as long
-     * as it is not already cancelled, rejected or completed. The action is written to the
-     * audit log.
+     * as it is not already cancelled, rejected or completed. If the booking was paid, the
+     * full amount is refunded through Stripe first. The action is then written to the audit
+     * log, and the other party (the owner if the renter cancelled, otherwise the renter) is
+     * notified.
      *
      * @param bookingId      the id of the booking to cancel
      * @param authentication the logged-in user, who must be the renter or the car owner
      * @return the cancelled booking
-     * @throws InformationNotFoundException if the user or booking does not exist
+     * @throws InformationNotFoundException if the user or booking does not exist, or a paid
+     *                                      booking has no paid payment to refund
      * @throws ForbiddenException           if the user is neither the renter nor the car owner
      * @throws BadRequestException          if the booking is already cancelled, rejected or
      *                                      completed
@@ -270,15 +284,20 @@ public class BookingService {
         }
 
         String message = "Booking " + booking.getId() + " cancelled by user " + currentUser.getId();
-        log.info(message);
-        auditLogService.log(currentUser.getId(), "BOOKING_CANCELLED", "Booking", booking.getId(), message);
 
         booking.setStatus(BookingStatus.CANCELLED);
+
         if(booking.isPaid()){
             stripeService.refund(booking);
             booking.setRefunded(true);
+            message += ", payment refunded";
         }
-        return toResponse(bookingRepository.save(booking));
+        log.info(message);
+        BookingResponse response = toResponse(bookingRepository.save(booking));
+        auditLogService.log(currentUser.getId(), "BOOKING_CANCELLED", "Booking", booking.getId(), message);
+        Long notifyUserId = isRenter ? booking.getCar().getOwner().getId() : booking.getRenter().getId();
+        notificationService.sendEvent(notifyUserId, "BOOKING_CANCELLED", response);
+        return response;
     }
 
     /**
@@ -348,27 +367,14 @@ public class BookingService {
 
     /**
      * Converts a {@link Booking} entity into a {@link BookingResponse}, so every method
-     * returns the same shape.
+     * returns the same shape. The mapping itself lives in {@link BookingResponse#from(Booking)},
+     * which StripeService uses too.
      *
      * @param booking the booking entity
      * @return the response object
      */
     private BookingResponse toResponse(Booking booking) {
-        return new BookingResponse(
-                booking.getId(),
-                booking.getCar().getId(),
-                booking.getCar().getMake().getName(),
-                booking.getCar().getModel(),
-                booking.getRenter().getId(),
-                booking.getStartDate(),
-                booking.getEndDate(),
-                booking.getTotalPrice(),
-                booking.getStatus(),
-                booking.getCreatedAt(),
-                booking.getUpdatedAt(),
-                booking.isPaid(),
-                booking.isRefunded()
-        );
+        return BookingResponse.from(booking);
     }
 
 }

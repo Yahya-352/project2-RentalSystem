@@ -37,7 +37,10 @@ public class CarController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @Operation(summary = "List available cars (filter by city, category or make)")
+    @Operation(summary = "Search cars; all filters are optional and combined",
+            description = "Filters: cityId, countryId, categoryId, makeId, minPrice, maxPrice, transmission, "
+                    + "fuelType, minSeats, and startDate + endDate (yyyy-MM-dd, both or neither) to return only "
+                    + "cars with no approved booking overlapping those dates. Supports page, size and sort.")
     @GetMapping("/")
     public PageResponse<CarResponse> getCars(@ModelAttribute @Valid CarSearchRequest request,
                                              @PageableDefault(size = 10) Pageable pageable) {

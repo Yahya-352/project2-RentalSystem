@@ -36,8 +36,16 @@ const EVENT_TEXT: Record<string, (b: BookingResponse | null) => string> = {
   BOOKING_CREATED: (b) => `New booking request for ${carName(b)}`,
   BOOKING_APPROVED: (b) => `Your booking for ${carName(b)} was approved`,
   BOOKING_REJECTED: (b) => `Your booking for ${carName(b)} was rejected`,
-  BOOKING_CANCELLED: (b) => `Booking for ${carName(b)} was cancelled`,
+  BOOKING_CANCELLED: (b) =>
+    b?.refunded ? `Booking for ${carName(b)} was cancelled and refunded` : `Booking for ${carName(b)} was cancelled`,
+  // Sent by the Stripe webhook (StripeService.capturePayment).
+  PAYMENT_RECEIVED: (b) => `Payment received for your ${carName(b)} booking`,
+  BOOKING_PAID: (b) => `Booking for ${carName(b)} has been paid`,
+  PAYMENT_FAILED: (b) => `Payment for your ${carName(b)} booking wasn't completed. You can try again.`,
 };
+
+/** Events shown as an error toast rather than an info one. */
+const ERROR_EVENTS = new Set(['BOOKING_REJECTED', 'PAYMENT_FAILED']);
 
 function carName(b: BookingResponse | null) {
   return b ? `${b.make} ${b.model}` : 'a car';
@@ -93,7 +101,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       const n: AppNotification = { id: nextId++, event, booking, receivedAt: Date.now(), read: false };
       setNotifications((list) => [n, ...list].slice(0, 30));
       setBookingVersion((v) => v + 1);
-      notify(describeEvent(n), event === 'BOOKING_REJECTED' ? 'error' : 'info');
+      notify(describeEvent(n), ERROR_EVENTS.has(event) ? 'error' : 'info');
     };
 
     const connect = async () => {

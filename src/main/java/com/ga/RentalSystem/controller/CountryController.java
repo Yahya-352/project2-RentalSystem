@@ -20,7 +20,7 @@ public class CountryController {
     private final CountryService countryService;
 
     @GetMapping
-    @Operation(summary = "Get all countries")
+    @Operation(summary = "Get all countries (public)")
     public List<CountryResponse> getAllCountries() {
         return countryService.getAllCountries();
     }

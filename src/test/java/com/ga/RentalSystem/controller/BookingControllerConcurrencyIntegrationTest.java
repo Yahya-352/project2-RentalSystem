@@ -73,6 +73,8 @@ class BookingControllerConcurrencyIntegrationTest {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private CityRepository cityRepository;
 
     @BeforeEach
     void setUp() throws Exception{
@@ -91,6 +93,7 @@ class BookingControllerConcurrencyIntegrationTest {
         car.setMake(make);
         car.setCategory(category);
         car.setOwner(agency);
+        car.setCity(cityRepository.findByNameAndCountryIso2("Manama" , "BH").orElseThrow());
         car.setModel("Test Model");
         car.setPricePerDay(new BigDecimal("20.000"));
         car = carRepository.save(car);

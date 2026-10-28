@@ -11,12 +11,13 @@ RentRide is a REST API for renting cars, where customers book cars, agencies lis
 5. [User Stories](#user-stories)
 6. [ERD](#erd)
 7. [Planning](#planning)
-8. [API Documentation](#api-documentation)
-9. [Installation](#installation)
-10. [Unsolved Problems](#unsolved-problems)
-11. [Major Challenges](#major-challenges)
-12. [Future Improvements](#future-improvements)
-13. [External Resources](#external-resources)
+8. [Project 3 Changes](#project-3-changes)
+9. [API Documentation](#api-documentation)
+10. [Installation](#installation)
+11. [Unsolved Problems](#unsolved-problems)
+12. [Major Challenges](#major-challenges)
+13. [Future Improvements](#future-improvements)
+14. [External Resources](#external-resources)
 
 ---
 
@@ -167,6 +168,75 @@ The user stories are grouped by role (customer, agency, admin) and system qualit
 The planning document covers the scope, the deliverables by phase with their progress, the timeline, and the way of working.
 
 [Planning document](docs/planning.md)
+
+---
+
+## Project 3 Changes
+
+### New functionality
+- **Combined car search:** city, country, category, make, price range, seats, transmission, fuel and **availability between two dates**, all optional and combined (JPA Specifications).
+- **Booking calendar:** the taken dates of a car, so customers pick free days.
+- **Stripe payments:** approved bookings are paid on Stripe Checkout; a webhook marks them paid.
+- **Automatic refunds:** cancelling a paid booking refunds the full amount.
+- **Scheduled jobs:** every day, finished bookings become `COMPLETED` and unanswered requests past their pick-up date become `REJECTED`.
+- **More notifications and audit logs:** payment received, booking paid, payment failed, booking cancelled.
+
+### New models
+- **Country** and **City** (seeded from a JSON dataset); a car now belongs to a city instead of a free-text location.
+- **Payment** (amount, currency, status `PENDING`/`PAID`/`FAILED`/`REFUNDED`, Stripe session and payment intent).
+- **Booking** gained `paid` and `refunded`.
+
+### Concurrency explanation
+| Workflow | What could go wrong | How it is prevented | Why this approach |
+|---|---|---|---|
+| **Approving bookings** (`PATCH /bookings/{id}/approve`) | Two agency requests approve overlapping bookings at the same time → the car is double-booked | A `ReentrantLock` per car (`ConcurrentHashMap`) makes "check availability + save" one step; the loser gets **409** | Cheap, in-memory, and approvals of different cars don't block each other |
+| **Paying** (`POST /pay/{bookingId}`) | A double click creates two Stripe sessions → the customer pays twice | A pessimistic DB lock on the booking row (`SELECT ... FOR UPDATE`) inside a transaction; the second request waits, then gets **409** | The payments don't exist yet, so the booking row is the lock; works across instances and rolls back with the transaction |
+| **Refunding** | A retry after an error refunds twice | A Stripe **idempotency key** (`refund-booking-{id}`) | Stripe performs the same refund only once |
+| **Scheduled jobs** | A job overwrites a booking that was just cancelled | One bulk `UPDATE ... WHERE status = ...`, which the database re-checks | No load-then-save gap in Java |
+
+**Database consistency:** availability, payment and status rules are checked inside the lock or the transaction that writes, so a request never acts on stale data. Full write-ups: [docs/race-condition.md](docs/race-condition.md).
+
+**Asynchronous processing:** emails and SSE notifications run with `@Async` on two separate thread pools, so a slow mail server never slows down a request:
+- `emailExecutor` (2–4 threads, queue 100, `CallerRunsPolicy`: an email is never dropped, and the caller sends it when the pool is full)
+- `notificationExecutor` (2–4 threads, queue 100, `DiscardPolicy`: a live notification can be dropped under heavy load)
+
+The scheduled jobs run on Spring's scheduler thread.
+
+### Testing
+- **Unit test** (`BookingConcurrencyTest`): two threads approve overlapping bookings with mocked repositories (an `AtomicInteger` counts successes) → exactly 1.
+- **Integration test** (`BookingControllerConcurrencyIntegrationTest`): N real `PATCH /bookings/{id}/approve` requests on the same car, started together with two `CountDownLatch`es, against PostgreSQL. Results are collected with `Future`s → exactly **1 × 200** and **N−1 × 409**:
+  ```
+  pool-3-thread-5 -> booking 110 -> 200
+  pool-3-thread-3 -> booking 108 -> 409
+  ...
+  ```
+- **Manual:** paying and refunding with Stripe's test card (`4242 4242 4242 4242`) and `stripe listen`.
+
+### Updated API
+| Endpoint | Change | Access |
+|---|---|---|
+| `GET /cars/` | **Modified:** combined filters + `startDate`/`endDate` | logged in |
+| `POST /cars/create`, `PUT /cars/update/{id}` | **Modified:** `cityId` instead of `location` | agency |
+| `GET /countries`, `GET /cities?countryId=` | **New** | public |
+| `GET /bookings/car/{carId}/dates` | **New:** taken dates for the calendar | logged in |
+| `PATCH /bookings/{id}/cancel` | **Modified:** refunds paid bookings and notifies the other party | renter / owner |
+| `POST /pay/{bookingId}` | **New:** returns a Stripe Checkout URL (**409** if a payment is pending or done) | renter |
+| `POST /pay/webhook` | **New:** called by Stripe (signature-checked) | Stripe |
+
+Booking responses now include `paid` and `refunded`.
+
+### Challenges
+- **Learning Stripe (about 2 days):** understanding the documentation took the longest: Checkout Sessions vs PaymentIntents, webhooks and their signature check, forwarding events locally with the Stripe CLI, an API version mismatch that made the webhook's session object come back empty, amounts in the smallest currency unit (fils/cents), BHD not being supported by the account, and needing the PaymentIntent id (not the session id) for refunds.
+- **Hibernate enum CHECK constraints:** adding `REFUNDED` to the enum didn't update the database constraint, so the first refund succeeded in Stripe but rolled back in the database. The idempotency key made the retry safe.
+- **Adding a required column to a table with data:** `city_id NOT NULL` failed on existing rows; solved with add nullable → fill → set `NOT NULL`.
+- **Locking rows that don't exist yet:** solved by locking the booking instead of its payments.
+- **Making requests really concurrent in a test:** a simple loop runs them one after another; latches were needed.
+
+### Future improvements
+- Charge the real USD equivalent of BHD (the Stripe account doesn't support BHD yet).
+- Expire abandoned Stripe sessions after 30 minutes.
+- Send notifications only after the transaction commits.
+- Move the approval lock to the database so it works across several servers.
 
 ---
 
@@ -390,6 +460,25 @@ Open `http://localhost:8080/swagger-ui/index.html` in your browser. See [API Doc
 
 **Server-Sent Events (real-time notifications)**
 - [Server-Sent Events video tutorial](https://www.youtube.com/watch?v=WM_J4tajQHM&t=148s)
+
+**Countries and cities data**
+- [countries-states-cities-database](https://github.com/dr5hn/countries-states-cities-database) by dr5hn, licensed under the [ODbL](https://opendatacommons.org/licenses/odbl/) (filtered to the GCC countries)
+- [countries.json](https://github.com/dr5hn/countries-states-cities-database/blob/master/json/countries.json) from the same repository
+
+**Stripe**
+- [Stripe Checkout](https://docs.stripe.com/payments/checkout) and [Idempotent requests](https://docs.stripe.com/api/idempotent_requests)
+- [Webhook endpoints API](https://docs.stripe.com/api/webhook_endpoints/list)
+- [How to get the session id in a webhook](https://stackoverflow.com/questions/46368359/how-to-get-session-id-on-webhook) (Stack Overflow)
+
+**Webhooks**
+- [Webhook Basics and Implementing in Java and Spring Boot](https://medium.com/javarevisited/webhook-basics-and-implementing-in-java-and-springboot-1ff1e689d349) (Javarevisited)
+- [Understanding Webhooks: How They Work, Why They Matter, and How to Implement Them](https://medium.com/@franksagie1/understanding-webhooks-how-they-work-why-they-matter-and-how-to-implement-them-fd9d75c4e877) by Frank Sagie
+
+**Car search (JPA Specifications)**
+- [Spring Data JPA: creating a Specification subquery from different tables](https://stackoverflow.com/questions/44172358/spring-data-jpa-creating-specification-subquery-from-different-tables) (Stack Overflow)
+
+**Locking**
+- [Pessimistic vs Optimistic Locking](https://bytebytego.com/guides/pessimistic-vs-optimistic-locking/) (ByteByteGo)
 
 **Token bucket (rate limiting)**
 - [Rate Limit per Endpoint in Spring Boot APIs](https://medium.com/@AlexanderObregon/rate-limit-per-endpoint-in-spring-boot-apis-6f4f40da76a2) by Alexander Obregon

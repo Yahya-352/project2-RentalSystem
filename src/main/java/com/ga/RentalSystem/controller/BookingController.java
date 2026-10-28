@@ -65,7 +65,9 @@ public class BookingController {
         return bookingService.rejectBooking(id, authentication);
     }
 
-    @Operation(summary = "Cancel a booking (the renter or the car owner)")
+    @Operation(summary = "Cancel a booking (the renter or the car owner)",
+            description = "If the booking was paid, the full amount is refunded through Stripe. "
+                    + "The other party is notified.")
     @PreAuthorize("hasAnyRole('CUSTOMER','AGENCY')")
     @PatchMapping("/{id}/cancel")
     public BookingResponse cancelBooking(@PathVariable("id") Long id,
@@ -83,7 +85,9 @@ public class BookingController {
     }
 
     @GetMapping("/car/{carId}/dates")
-    @Operation(summary = "date ranges of a car, for the booking calendar")
+    @Operation(summary = "Taken date ranges of a car, for the booking calendar",
+            description = "Upcoming approved bookings of the car. Each range blocks startDate up to, "
+                    + "but not including, endDate: the return day is free for the next pick-up.")
     public List<BookingCalenderDatesResponse> getBookedDates(@PathVariable Long carId) {
         return bookingService.getBookedDates(carId);
     }

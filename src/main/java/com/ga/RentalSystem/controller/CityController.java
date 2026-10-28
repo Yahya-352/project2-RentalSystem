@@ -15,13 +15,13 @@ import java.util.List;
 @RestController
 @RequestMapping("/cities")
 @RequiredArgsConstructor
-@Tag(name = "Cities", description = "Cities of a country, searchable by name")
+@Tag(name = "Cities", description = "Cities that cars can be located in, per country")
 public class CityController {
 
     private final CityService cityService;
 
     @GetMapping
-    @Operation(summary = "Get the cities of a country, optionally filtered by name")
+    @Operation(summary = "Get the cities of a country (public)")
     public List<CityResponse> getCities(@RequestParam Long countryId) {
         return cityService.getCities(countryId);
     }

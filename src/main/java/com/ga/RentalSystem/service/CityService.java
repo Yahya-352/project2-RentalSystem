@@ -10,6 +10,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * Read-only access to the cities cars can be located in. They are seeded from
+ * {@code data/countries+cities.json} at startup (see DataSeeder).
+ */
 @Service
 @RequiredArgsConstructor
 public class CityService {
@@ -17,6 +21,13 @@ public class CityService {
     private final CityRepository cityRepository;
     private final CountryRepository countryRepository;
 
+    /**
+     * Returns the cities of one country, for the city dropdown shown after a country is picked.
+     *
+     * @param countryId the id of the country
+     * @return the country's cities
+     * @throws InformationNotFoundException if the country does not exist
+     */
     public List<CityResponse> getCities(Long countryId) {
         if (!countryRepository.existsById(countryId)) {
             throw new InformationNotFoundException("Country not found with id: " + countryId);

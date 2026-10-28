@@ -91,7 +91,6 @@ public class DataSeeder implements CommandLineRunner {
         if (cityRepository.count() > 0){
             return;
         }
-        //the cities file links cities to their country by name
         Map<String , Country> countriesByName = countryRepository.findAll().stream()
                 .collect(Collectors.toMap(Country::getName , c -> c));
         List<City> cities = new ArrayList<>();
@@ -168,7 +167,6 @@ public class DataSeeder implements CommandLineRunner {
         log.info(role + " Seeded");
     }
 
-    // license plates of the seeded cars, used to tell them apart from cars added through the app
     private static final List<String> SEED_PLATES = List.of(
             "SEED-001", "SEED-002", "SEED-003", "SEED-004", "SEED-005", "SEED-006");
 
@@ -182,7 +180,6 @@ public class DataSeeder implements CommandLineRunner {
                 .map(Car::getLicensePlate)
                 .collect(Collectors.toSet());
 
-        //plate, make, model, category, location, year, transmission, fuel, seats, price per day (BHD)
         Object[][] cars = {
                 {"SEED-001", "Toyota", "Corolla", "Economy", "Manama", 2023, TransmissionType.AUTOMATIC, FuelType.PETROL, 5, "12.000"},
                 {"SEED-002", "Hyundai", "Tucson", "SUV", "Manama", 2024, TransmissionType.AUTOMATIC, FuelType.PETROL, 5, "18.500"},
@@ -198,7 +195,6 @@ public class DataSeeder implements CommandLineRunner {
             if(existingPlates.contains(plate)){
                 continue;
             }
-            //looked up by name, because ids depend on the order rows were inserted
             Make make = findMake((String) row[1]);
             Category category = findCategory((String) row[3]);
             City city = cityRepository.findByNameAndCountryIso2((String) row[4], "BH").orElse(null);
@@ -238,17 +234,14 @@ public class DataSeeder implements CommandLineRunner {
                 .filter(car -> SEED_PLATES.contains(car.getLicensePlate()) && !car.isDeleted())
                 .toList();
 
-        //already seeded (or booked through the app) on an earlier run, so restarting never duplicates them
         boolean alreadyBooked = seedCars.stream()
                 .anyMatch(car -> !bookingRepository.findByCarId(car.getId()).isEmpty());
         if(seedCars.isEmpty() || alreadyBooked){
             return;
         }
 
-        //one sample booking of each status, with dates relative to today so they always make sense
         LocalDate today = LocalDate.now();
         Object[][] bookings = {
-                //plate, start offset (days from today), length in days, status
                 {"SEED-001", -20, 4, BookingStatus.COMPLETED},
                 {"SEED-001", 5, 3, BookingStatus.APPROVED},
                 {"SEED-002", 3, 4, BookingStatus.PENDING},
