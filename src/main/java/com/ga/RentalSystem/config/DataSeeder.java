@@ -173,7 +173,6 @@ public class DataSeeder implements CommandLineRunner {
         log.info(role + " Seeded");
     }
 
-    /** Same folder CarService saves uploaded car images to. */
     private static final Path CAR_IMAGES = Paths.get("uploads/cars").toAbsolutePath().normalize();
 
     private static final List<String> SEED_PLATES = List.of(
@@ -287,12 +286,6 @@ public class DataSeeder implements CommandLineRunner {
         }
     }
 
-    /**
-     * Gives every seeded car that has no photos yet its real photos from
-     * src/main/resources/seed-images (SEED-001-1.jpg, SEED-001-2.jpg, ...). The files are
-     * copied into uploads/cars under a random name, like an uploaded image. Credits for the
-     * photos are in the README.
-     */
     private void seedCarImages(){
         List<Car> seedCars = carRepository.findAll().stream()
                 .filter(car -> SEED_PLATES.contains(car.getLicensePlate()))
