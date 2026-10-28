@@ -28,6 +28,11 @@ const FILTER_KEYS = [
 type FilterKey = (typeof FILTER_KEYS)[number];
 type Filters = Record<FilterKey, string>;
 
+/** The filters kept behind the "More filters" button; the rest are always in the search bar. */
+const MORE_KEYS: FilterKey[] = ['categoryId', 'makeId', 'transmission', 'fuelType', 'minSeats', 'minPrice', 'maxPrice'];
+
+const datesChosenOf = (f: Filters) => Boolean(f.startDate && f.endDate);
+
 const readFilters = (params: URLSearchParams) =>
   Object.fromEntries(FILTER_KEYS.map((k) => [k, params.get(k) ?? ''])) as Filters;
 
@@ -115,7 +120,30 @@ export function CarsPage() {
   };
 
   const activeCount = FILTER_KEYS.filter((k) => applied[k] !== '').length;
-  const datesChosen = Boolean(applied.startDate && applied.endDate);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreCount = MORE_KEYS.filter((k) => applied[k] !== '').length;
+
+  // One removable chip per applied filter. Dates go together; removing the country also removes the city.
+  const nameOf = (list: { id: number; name: string }[] | undefined, id: string) =>
+    list?.find((x) => String(x.id) === id)?.name;
+  const chips: { label: string; keys: FilterKey[] }[] = [];
+  if (datesChosenOf(applied)) {
+    chips.push({ label: `${formatDate(applied.startDate)} → ${formatDate(applied.endDate)}`, keys: ['startDate', 'endDate'] });
+  }
+  if (applied.countryId) {
+    chips.push({ label: nameOf(countries, applied.countryId) ?? 'Country', keys: ['countryId', 'cityId'] });
+  }
+  if (applied.cityId) chips.push({ label: nameOf(cities.data, applied.cityId) ?? 'City', keys: ['cityId'] });
+  if (applied.categoryId) {
+    chips.push({ label: nameOf(catalog?.categories, applied.categoryId) ?? 'Category', keys: ['categoryId'] });
+  }
+  if (applied.makeId) chips.push({ label: nameOf(catalog?.makes, applied.makeId) ?? 'Make', keys: ['makeId'] });
+  if (applied.transmission) chips.push({ label: titleCase(applied.transmission), keys: ['transmission'] });
+  if (applied.fuelType) chips.push({ label: titleCase(applied.fuelType), keys: ['fuelType'] });
+  if (applied.minSeats) chips.push({ label: `${applied.minSeats}+ seats`, keys: ['minSeats'] });
+  if (applied.minPrice) chips.push({ label: `From ${formatMoney(applied.minPrice)}/day`, keys: ['minPrice'] });
+  if (applied.maxPrice) chips.push({ label: `Up to ${formatMoney(applied.maxPrice)}/day`, keys: ['maxPrice'] });
+  const datesChosen = datesChosenOf(applied);
   // Carry the dates to the car page so its booking calendar starts with them selected.
   const carLinkSearch = datesChosen ? `?start=${applied.startDate}&end=${applied.endDate}` : '';
 
@@ -130,28 +158,9 @@ export function CarsPage() {
         }
       />
 
-      <form className="card filters-card" onSubmit={apply}>
-        <div className="filters">
-          <Field label="Pick-up">
-            <input
-              type="date"
-              value={draft.startDate}
-              min={todayIso()}
-              onChange={(e) => {
-                const startDate = e.target.value;
-                // A return date on or before the new pick-up date no longer makes sense.
-                setDraft((d) => ({ ...d, startDate, endDate: d.endDate && d.endDate <= startDate ? '' : d.endDate }));
-              }}
-            />
-          </Field>
-          <Field label="Return">
-            <input
-              type="date"
-              value={draft.endDate}
-              min={draft.startDate || todayIso(1)}
-              onChange={set('endDate')}
-            />
-          </Field>
+      <form onSubmit={apply}>
+        {/* Main bar: where and when */}
+        <div className="card search-bar">
           <Field label="Country">
             <select
               value={draft.countryId}
@@ -178,80 +187,39 @@ export function CarsPage() {
                 ))}
             </select>
           </Field>
-          <Field label="Category">
-            <select value={draft.categoryId} onChange={set('categoryId')}>
-              <option value="">{catalog ? 'Any category' : 'Loading…'}</option>
-              {(catalog?.categories ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Make">
-            <select value={draft.makeId} onChange={set('makeId')}>
-              <option value="">{catalog ? 'Any make' : 'Loading…'}</option>
-              {(catalog?.makes ?? []).map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Transmission">
-            <select value={draft.transmission} onChange={set('transmission')}>
-              <option value="">Any</option>
-              {TRANSMISSIONS.map((t) => (
-                <option key={t} value={t}>
-                  {titleCase(t)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Fuel">
-            <select value={draft.fuelType} onChange={set('fuelType')}>
-              <option value="">Any</option>
-              {FUEL_TYPES.map((f) => (
-                <option key={f} value={f}>
-                  {titleCase(f)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Seats (at least)">
-            <input type="number" min={1} max={20} value={draft.minSeats} onChange={set('minSeats')} placeholder="Any" />
-          </Field>
-          <Field label="Min price / day">
+          <Field label="Pick-up">
             <input
-              type="number"
-              min={0}
-              step="0.001"
-              value={draft.minPrice}
-              onChange={set('minPrice')}
-              placeholder="0.000"
+              type="date"
+              value={draft.startDate}
+              min={todayIso()}
+              onChange={(e) => {
+                const startDate = e.target.value;
+                // A return date on or before the new pick-up date no longer makes sense.
+                setDraft((d) => ({ ...d, startDate, endDate: d.endDate && d.endDate <= startDate ? '' : d.endDate }));
+              }}
             />
           </Field>
-          <Field label="Max price / day">
+          <Field label="Return">
             <input
-              type="number"
-              min={0.001}
-              step="0.001"
-              value={draft.maxPrice}
-              onChange={set('maxPrice')}
-              placeholder="Any"
+              type="date"
+              value={draft.endDate}
+              min={draft.startDate || todayIso(1)}
+              onChange={set('endDate')}
             />
           </Field>
+          <button className="btn btn-primary search-bar-btn">Search</button>
         </div>
 
-        {formError && <div className="alert alert-error">{formError}</div>}
-
-        <div className="filters-actions">
-          <button className="btn btn-primary">Search</button>
-          {activeCount > 0 && (
-            <button type="button" className="btn btn-ghost btn-sm" onClick={clear}>
-              Clear filters ({activeCount})
-            </button>
-          )}
+        <div className="search-toolbar">
+          <button
+            type="button"
+            className={`btn btn-ghost btn-sm ${moreOpen ? 'is-open' : ''}`}
+            onClick={() => setMoreOpen((o) => !o)}
+            aria-expanded={moreOpen}
+            aria-controls="more-filters"
+          >
+            ⚙ More filters{moreCount > 0 && ` (${moreCount})`}
+          </button>
           <span className="spacer" />
           <select value={sort} onChange={(e) => update({ sort: e.target.value, page: null })} aria-label="Sort">
             {SORTS.map((s) => (
@@ -261,6 +229,100 @@ export function CarsPage() {
             ))}
           </select>
         </div>
+
+        {/* Secondary filters, hidden until "More filters" is pressed */}
+        {moreOpen && (
+          <div id="more-filters" className="card more-filters">
+            <Field label="Category">
+              <select value={draft.categoryId} onChange={set('categoryId')}>
+                <option value="">{catalog ? 'Any category' : 'Loading…'}</option>
+                {(catalog?.categories ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Make">
+              <select value={draft.makeId} onChange={set('makeId')}>
+                <option value="">{catalog ? 'Any make' : 'Loading…'}</option>
+                {(catalog?.makes ?? []).map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Transmission">
+              <select value={draft.transmission} onChange={set('transmission')}>
+                <option value="">Any</option>
+                {TRANSMISSIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {titleCase(t)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Fuel">
+              <select value={draft.fuelType} onChange={set('fuelType')}>
+                <option value="">Any</option>
+                {FUEL_TYPES.map((f) => (
+                  <option key={f} value={f}>
+                    {titleCase(f)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Seats (at least)">
+              <input type="number" min={1} max={20} value={draft.minSeats} onChange={set('minSeats')} placeholder="Any" />
+            </Field>
+            <Field label="Min price / day">
+              <input
+                type="number"
+                min={0}
+                step="0.001"
+                value={draft.minPrice}
+                onChange={set('minPrice')}
+                placeholder="0.000"
+              />
+            </Field>
+            <Field label="Max price / day">
+              <input
+                type="number"
+                min={0.001}
+                step="0.001"
+                value={draft.maxPrice}
+                onChange={set('maxPrice')}
+                placeholder="Any"
+              />
+            </Field>
+            <div className="more-filters-actions">
+              <button className="btn btn-primary btn-sm">Apply filters</button>
+            </div>
+          </div>
+        )}
+
+        {formError && <div className="alert alert-error">{formError}</div>}
+
+        {/* What is currently applied; × removes one filter */}
+        {chips.length > 0 && (
+          <div className="active-filters">
+            {chips.map((c) => (
+              <button
+                key={c.label}
+                type="button"
+                className="filter-chip"
+                onClick={() => update({ ...Object.fromEntries(c.keys.map((k) => [k, null])), page: null })}
+                aria-label={`Remove filter ${c.label}`}
+              >
+                {c.label} <span aria-hidden="true">×</span>
+              </button>
+            ))}
+            <button type="button" className="link-btn small" onClick={clear}>
+              Clear filters ({activeCount})
+            </button>
+          </div>
+        )}
       </form>
 
       {error ? (
