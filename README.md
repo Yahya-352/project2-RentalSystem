@@ -380,6 +380,7 @@ Seeding runs automatically every time the application starts, and it only create
 - The GCC countries (Bahrain, Kuwait, Oman, Qatar, Saudi Arabia, United Arab Emirates) and their cities, read from `src/main/resources/data/countries.json` and `countries+cities.json`. Every car must be in one of these cities.
 - One test customer and one test agency (both already verified and active)
 - Six sample cars owned by the test agency (license plates `SEED-001` to `SEED-006`)
+- Two real photos for each sample car, copied from `src/main/resources/seed-images` into `uploads/cars` (only for cars that have no photos yet)
 - Six sample bookings by the test customer, covering every booking status
 
 | Role | Email | Password |
@@ -511,6 +512,23 @@ Run the tests from a terminal where the environment variables from step 4 are se
 **Countries and cities data**
 - [countries-states-cities-database](https://github.com/dr5hn/countries-states-cities-database) by dr5hn, licensed under the [ODbL](https://opendatacommons.org/licenses/odbl/) (filtered to the GCC countries)
 - [countries.json](https://github.com/dr5hn/countries-states-cities-database/blob/master/json/countries.json) from the same repository
+
+**Car photos (seed data)**
+
+The photos of the six seeded cars (`src/main/resources/seed-images`) come from Wikimedia Commons, resized to 1280 px wide. Used for the sample cars in the demo.
+
+- `SEED-001-1.jpg` (Toyota Corolla): ["Toyota Corolla sedan E210 hydrid"](https://commons.wikimedia.org/wiki/File:Toyota_Corolla_sedan_E210_hydrid.jpg) by Mateusmatsuda, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)
+- `SEED-001-2.jpg` (Toyota Corolla): ["TOYOTA COROLLA SEDAN (E210) China"](https://commons.wikimedia.org/wiki/File:TOYOTA_COROLLA_SEDAN_(E210)_China.jpg) by Dinkun Chen, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- `SEED-002-1.jpg` (Hyundai Tucson): ["Hyundai Tucson (NX4) 1X7A0424"](https://commons.wikimedia.org/wiki/File:Hyundai_Tucson_(NX4)_1X7A0424.jpg) by Alexander Migl, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- `SEED-002-2.jpg` (Hyundai Tucson): ["Hyundai Tucson (NX4, SWB) IMG 9135"](https://commons.wikimedia.org/wiki/File:Hyundai_Tucson_(NX4,_SWB)_IMG_9135.jpg) by Alexander-93, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- `SEED-003-1.jpg` (Nissan Altima): ["NISSAN ALTIMA (L34) China (3)"](https://commons.wikimedia.org/wiki/File:NISSAN_ALTIMA_(L34)_China_(3).jpg) by Dinkun Chen, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- `SEED-003-2.jpg` (Nissan Altima): ["NISSAN ALTIMA (L34) China (5)"](https://commons.wikimedia.org/wiki/File:NISSAN_ALTIMA_(L34)_China_(5).jpg) by Dinkun Chen, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- `SEED-004-1.jpg` (Tesla Model 3): ["Tesla Model 3 (2023) IMG 9488 (cropped)"](https://commons.wikimedia.org/wiki/File:Tesla_Model_3_(2023)_IMG_9488_(cropped).jpg) by Alexander-93, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- `SEED-004-2.jpg` (Tesla Model 3): ["Tesla Model 3, EMS 2024, Essen (P1032260)"](https://commons.wikimedia.org/wiki/File:Tesla_Model_3,_EMS_2024,_Essen_(P1032260).jpg) by Matti Blume, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- `SEED-005-1.jpg` (Kia Carnival): ["KIA CARNIVAL (KA4) China (5)"](https://commons.wikimedia.org/wiki/File:KIA_CARNIVAL_(KA4)_China_(5).jpg) by Dinkun Chen, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- `SEED-005-2.jpg` (Kia Carnival): ["Kia Carnival KA4 PE 1.6T EX HEV Snowflake White Pearl"](https://commons.wikimedia.org/wiki/File:Kia_Carnival_KA4_PE_1.6T_EX_HEV_Snowflake_White_Pearl.jpg) by Ethan Llamas, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- `SEED-006-1.jpg` (BMW Z4): ["BMW G29 Z4 M40i (Facelift) 1X7A6946"](https://commons.wikimedia.org/wiki/File:BMW_G29_Z4_M40i_(Facelift)_1X7A6946.jpg) by Alexander-93, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+- `SEED-006-2.jpg` (BMW Z4): ["BMW Z4 (G29, facelift) M40i DSC 7273"](https://commons.wikimedia.org/wiki/File:BMW_Z4_(G29,_facelift)_M40i_DSC_7273.jpg) by Alexander Migl, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
 
 **Stripe**
 - [Stripe Checkout](https://docs.stripe.com/payments/checkout) and [Idempotent requests](https://docs.stripe.com/api/idempotent_requests)

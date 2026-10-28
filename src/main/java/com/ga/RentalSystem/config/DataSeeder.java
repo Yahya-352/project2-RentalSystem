@@ -20,12 +20,16 @@ import tools.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -40,6 +44,7 @@ public class DataSeeder implements CommandLineRunner {
     private final BookingRepository bookingRepository;
     private final CountryRepository countryRepository;
     private final CityRepository cityRepository;
+    private final ImageRepository imageRepository;
     private final ObjectMapper objectMapper;
     private final PasswordEncoder passwordEncoder;
 
@@ -62,6 +67,7 @@ public class DataSeeder implements CommandLineRunner {
         seedCountries();
         seedCities();
         seedCars();
+        seedCarImages();
         seedBookings();
     }
     private List<Country> listCountries(){
@@ -166,6 +172,9 @@ public class DataSeeder implements CommandLineRunner {
         userRepository.save(user);
         log.info(role + " Seeded");
     }
+
+    /** Same folder CarService saves uploaded car images to. */
+    private static final Path CAR_IMAGES = Paths.get("uploads/cars").toAbsolutePath().normalize();
 
     private static final List<String> SEED_PLATES = List.of(
             "SEED-001", "SEED-002", "SEED-003", "SEED-004", "SEED-005", "SEED-006");
@@ -275,6 +284,48 @@ public class DataSeeder implements CommandLineRunner {
         }
         if(seeded > 0){
             log.info(seeded + " Bookings Seeded");
+        }
+    }
+
+    /**
+     * Gives every seeded car that has no photos yet its real photos from
+     * src/main/resources/seed-images (SEED-001-1.jpg, SEED-001-2.jpg, ...). The files are
+     * copied into uploads/cars under a random name, like an uploaded image. Credits for the
+     * photos are in the README.
+     */
+    private void seedCarImages(){
+        List<Car> seedCars = carRepository.findAll().stream()
+                .filter(car -> SEED_PLATES.contains(car.getLicensePlate()))
+                .toList();
+
+        int seeded = 0;
+        for(Car car : seedCars){
+            if(!imageRepository.findByCarId(car.getId()).isEmpty()){
+                continue;
+            }
+            for(int i = 1; i <= 2; i++){
+                ClassPathResource resource = new ClassPathResource(
+                        "seed-images/" + car.getLicensePlate() + "-" + i + ".jpg");
+                if(!resource.exists()){
+                    continue;
+                }
+                String fileName = UUID.randomUUID() + ".jpg";
+                try(InputStream is = resource.getInputStream()){
+                    Files.createDirectories(CAR_IMAGES);
+                    Files.copy(is, CAR_IMAGES.resolve(fileName));
+                } catch (IOException e){
+                    log.warn("Could not copy seed image for " + car.getLicensePlate(), e);
+                    continue;
+                }
+                Image image = new Image();
+                image.setFileName(fileName);
+                image.setCar(car);
+                imageRepository.save(image);
+                seeded++;
+            }
+        }
+        if(seeded > 0){
+            log.info(seeded + " Car images Seeded");
         }
     }
 
