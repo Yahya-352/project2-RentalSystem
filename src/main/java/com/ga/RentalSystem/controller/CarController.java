@@ -7,6 +7,7 @@ import com.ga.RentalSystem.dto.response.PageResponse;
 import com.ga.RentalSystem.service.CarService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -42,8 +43,8 @@ public class CarController {
                     + "fuelType, minSeats, and startDate + endDate (yyyy-MM-dd, both or neither) to return only "
                     + "cars with no approved booking overlapping those dates. Supports page, size and sort.")
     @GetMapping("/")
-    public PageResponse<CarResponse> getCars(@ModelAttribute @Valid CarSearchRequest request,
-                                             @PageableDefault(size = 10) Pageable pageable) {
+    public PageResponse<CarResponse> getCars(@ParameterObject @ModelAttribute @Valid CarSearchRequest request,
+                                             @ParameterObject @PageableDefault(size = 10) Pageable pageable) {
         return carService.getCars(request, pageable);
     }
 

@@ -86,18 +86,23 @@ public class StripeService {
         Booking booking = bookingRepository.findByIdForUpdate(bookingId)
                 .orElseThrow(() -> new InformationNotFoundException("Booking not found"));
 
+        log.info("Checkout started for booking {} by user {}", bookingId, currentUser.getId());
+
         if (!booking.getRenter().getId().equals(currentUser.getId())) {
             throw new ForbiddenException("You are not allowed to perform this action");
         }
 
         if (!booking.getStatus().equals(BookingStatus.APPROVED)) {
+            log.warn("Checkout for booking {} rejected: status is {}", bookingId, booking.getStatus());
             throw new BadRequestException("Only approved Bookings can be paid");
         }
 
         if (paymentRepository.existsByBookingIdAndStatus(bookingId, PaymentStatus.PENDING)) {
+            log.warn("Checkout for booking {} rejected: payment already pending", bookingId);
             throw new ConflictException("Booking " + bookingId + " already has a pending payment");
         }
         if (paymentRepository.existsByBookingIdAndStatus(bookingId, PaymentStatus.PAID)) {
+            log.warn("Checkout for booking {} rejected: already paid", bookingId);
             throw new ConflictException("Booking " + bookingId + " is already paid");
         }
         SessionCreateParams.LineItem.PriceData.ProductData productData =
@@ -124,7 +129,9 @@ public class StripeService {
         Session session;
         try {
             session = stripeClient.v1().checkout().sessions().create(params);
+            log.info("Checkout session {} created for booking {}", session.getId(), bookingId);
         } catch (StripeException e) {
+            log.error("Checkout for booking {} failed", bookingId, e);
             throw new RuntimeException(e);
         }
 
@@ -235,6 +242,7 @@ public class StripeService {
             auditLogService.log(booking.getRenter().getId(), "PAYMENT_REFUNDED", "Payment", payment.getId(), message);
 
         } catch (StripeException e) {
+            log.error("Refund for booking {} failed", booking.getId(), e);
             throw new RuntimeException(e);
         }
     }

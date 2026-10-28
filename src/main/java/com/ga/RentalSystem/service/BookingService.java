@@ -198,6 +198,7 @@ public class BookingService {
                 booking.setStatus(BookingStatus.APPROVED);
                 response = toResponse(bookingRepository.save(booking));
             }else{
+                log.warn("Approve booking {} rejected: car {} already booked for these dates", bookingId, booking.getCar().getId());
                 throw new ConflictException("Car is not available at this date");
             }
         }finally {
