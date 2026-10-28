@@ -1,8 +1,9 @@
 package com.ga.RentalSystem.scheduler;
 
 import com.ga.RentalSystem.enums.BookingStatus;
-import com.ga.RentalSystem.model.Booking;
+
 import com.ga.RentalSystem.repository.BookingRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -13,18 +14,23 @@ import java.time.LocalDate;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class bookingScheduler {
+@Transactional
+public class BookingScheduler {
     private final BookingRepository bookingRepository;
 
     @Scheduled(cron = "0 0 12 * * ?")
     public void completeBooking() {
-        bookingRepository.completeFinishedBookings
+        int count = bookingRepository.completeFinishedBookings
                 (BookingStatus.APPROVED , BookingStatus.COMPLETED  , LocalDate.now());
+        log.info("{} bookings marked COMPLETED", count);
     }
 
     @Scheduled(cron = "0 0 12 * * ?")
     public void rejectBooking() {
-        bookingRepository.rejectUnApprovedBookings
+        int count = bookingRepository.rejectUnApprovedBookings
                 (BookingStatus.PENDING , BookingStatus.REJECTED , LocalDate.now() );
+        log.info("{} bookings marked Rejected", count);
     }
+
+
 }
