@@ -2,7 +2,6 @@ package com.ga.car_service.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import org.springframework.data.annotation.Id;
 
 @Entity
 @Table(name = "makes")
