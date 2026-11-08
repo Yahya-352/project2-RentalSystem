@@ -2,6 +2,7 @@ package com.ga.user_service.service;
 
 
 
+import com.ga.user_service.client.AuditClient;
 import com.ga.user_service.dto.request.UserProfileRequest;
 import com.ga.user_service.dto.response.UserProfileResponse;
 import com.ga.user_service.enums.Role;
@@ -30,7 +31,7 @@ import java.util.UUID;
 public class UserProfileService {
     private final UserProfileRepository userProfileRepository;
     private final UserRepository userRepository;
-//    private final AuditLogService auditLogService;
+    private final AuditClient auditClient;
 
     public UserProfileResponse createProfile(UserProfileRequest request,
                                              Authentication authentication){
@@ -57,7 +58,7 @@ public class UserProfileService {
 
         String message = "User " + currentUser.getId() + " created their profile";
         log.info(message);
-//        auditLogService.log(currentUser.getId(), "PROFILE_CREATED", "UserProfile", saved.getId(), message);
+        auditClient.log(currentUser.getId(), "PROFILE_CREATED", "UserProfile", saved.getId(), message);
 
         return toResponse(saved);
     }
@@ -89,7 +90,7 @@ public class UserProfileService {
         UserProfile updated = userProfileRepository.save(profile);
         String message = "User " + currentUser.getId() + " updated their profile";
         log.info(message);
-//        auditLogService.log(currentUser.getId(), "PROFILE_UPDATED", "UserProfile", updated.getId(), message);
+        auditClient.log(currentUser.getId(), "PROFILE_UPDATED", "UserProfile", updated.getId(), message);
 
         return toResponse(updated);
     }

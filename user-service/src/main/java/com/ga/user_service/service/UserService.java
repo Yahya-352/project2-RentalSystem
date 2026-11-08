@@ -1,7 +1,6 @@
 package com.ga.user_service.service;
 
-
-
+import com.ga.user_service.client.AuditClient;
 import com.ga.user_service.dto.request.ChangePasswordRequest;
 import com.ga.user_service.dto.request.LoginRequest;
 import com.ga.user_service.dto.request.RegisterRequest;
@@ -52,7 +51,7 @@ public class UserService {
     private final JWTUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
 
-//    private final AuditLogService auditLogService;   // new
+    private final AuditClient auditClient;   // new
 
 
     /**
@@ -70,7 +69,7 @@ public class UserService {
     @Autowired
     public UserService(UserRepository userRepository,
                        EmailService emailService,
-//                       AuditLogService auditLogService,
+                       AuditClient auditClient,
                        @Lazy PasswordEncoder passwordEncoder,
                        JWTUtils jwtUtils,
                        @Lazy AuthenticationManager authenticationManager) {
@@ -79,7 +78,7 @@ public class UserService {
         this.jwtUtils = jwtUtils;
         this.emailService = emailService;
         this.authenticationManager = authenticationManager;
-//        this.auditLogService = auditLogService;
+        this.auditClient = auditClient;
     }
 
     /**
@@ -145,7 +144,7 @@ public class UserService {
 
         String message = "User " + createdUser.getId() + " registered as " + role;
         log.info(message);
-//        auditLogService.log(createdUser.getId(), "USER_REGISTERED", "User", createdUser.getId(), message);
+        auditClient.log(createdUser.getId(), "USER_REGISTERED", "User", createdUser.getId(), message);
 
         RegisterResponse response = new RegisterResponse(
                 createdUser.getId(),
@@ -180,7 +179,7 @@ public class UserService {
 
         String message = "User " + user.getId() + " verified their email";
         log.info(message);
-//        auditLogService.log(user.getId(), "EMAIL_VERIFIED", "User", user.getId(), message);
+        auditClient.log(user.getId(), "EMAIL_VERIFIED", "User", user.getId(), message);
 
         return "Account verified!";
     }
@@ -272,7 +271,7 @@ public class UserService {
 
         String message = "User " + user.getId() + " reset their password";
         log.info(message);
-//        auditLogService.log(user.getId(), "PASSWORD_RESET", "User", user.getId(), message);
+        auditClient.log(user.getId(), "PASSWORD_RESET", "User", user.getId(), message);
 
         return "Password Updated";
     }
@@ -343,7 +342,7 @@ public class UserService {
 
         String message = "User " + user.getId() + " changed their password";
         log.info(message);
-//        auditLogService.log(user.getId(), "PASSWORD_CHANGED", "User", user.getId(), message);
+        auditClient.log(user.getId(), "PASSWORD_CHANGED", "User", user.getId(), message);
 
         return "Password changed successfully";
     }
@@ -393,7 +392,7 @@ public class UserService {
 
         String message = "Admin " + admin.getId() + " deactivated User " + user.getId();
         log.info(message);
-//        auditLogService.log(admin.getId(), "USER_DEACTIVATED", "User", user.getId(), message);
+        auditClient.log(admin.getId(), "USER_DEACTIVATED", "User", user.getId(), message);
     }
 
     /**
@@ -430,7 +429,7 @@ public class UserService {
         userRepository.save(user);
 
         log.info(message);
-//        auditLogService.log(admin.getId(), action, "User", user.getId(), message);
+        auditClient.log(admin.getId(), action, "User", user.getId(), message);
     }
 
 }

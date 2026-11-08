@@ -1,5 +1,6 @@
 package com.ga.user_service.service;
 
+import com.ga.user_service.client.AuditClient;
 import com.ga.user_service.dto.request.AgencyProfileRequest;
 import com.ga.user_service.dto.response.AgencyProfileResponse;
 import com.ga.user_service.enums.Role;
@@ -29,7 +30,7 @@ public class AgencyProfileService {
 
     private final AgencyProfileRepository agencyProfileRepository;
     private final UserRepository userRepository;
-//    private final AuditLogService auditLogService;
+    private final AuditClient auditClient;
 
     public AgencyProfileResponse createProfile(AgencyProfileRequest request, Authentication authentication) {
         User currentUser = getCurrentUser(authentication);
@@ -51,7 +52,7 @@ public class AgencyProfileService {
 
         String message = "Agency " + currentUser.getId() + " created their profile";
         log.info(message);
-//        auditLogService.log(currentUser.getId(), "PROFILE_CREATED", "AgencyProfile", saved.getId(), message);
+        auditClient.log(currentUser.getId(), "PROFILE_CREATED", "AgencyProfile", saved.getId(), message);
 
         return toResponse(saved);
     }
@@ -77,8 +78,8 @@ public class AgencyProfileService {
 
         String message = "Agency " + currentUser.getId() + " updated their profile";
         log.info(message);
-//        auditLogService.log(currentUser.getId(),
-//                "PROFILE_UPDATED", "AgencyProfile", updated.getId(), message);
+        auditClient.log(currentUser.getId(),
+                "PROFILE_UPDATED", "AgencyProfile", updated.getId(), message);
 
         return toResponse(updated);
     }
@@ -114,7 +115,7 @@ public class AgencyProfileService {
 
         String message = "Agency " + currentUser.getId() + " uploaded a logo";
         log.info(message);
-//        auditLogService.log(currentUser.getId(), "PROFILE_UPDATED", "AgencyProfile", profile.getId(), message);
+        auditClient.log(currentUser.getId(), "PROFILE_UPDATED", "AgencyProfile", profile.getId(), message);
     }
 
     private final Path rootLocation = Paths.get("uploads/agency").toAbsolutePath().normalize();
