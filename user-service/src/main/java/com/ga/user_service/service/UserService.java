@@ -136,7 +136,7 @@ public class UserService {
         user.setVerificationToken(token);
         user.setVerificationTokenExpiryDate(LocalDateTime.now().plusHours(1));
 
-        String link = "http://localhost:8080/users/verify?token=" + token;
+        String link = "http://localhost:8081/users/verify?token=" + token;
 
         User createdUser = userRepository.save(user);
 
