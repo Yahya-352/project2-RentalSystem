@@ -51,9 +51,8 @@ public class SecurityConfiguration {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
-                                "/pay/webhook",
-                                "/audit-logs"
-                        ).permitAll()
+                                "/pay/webhook"
+                                ).permitAll()
                         // public lists for the location pickers, read-only
                         .requestMatchers(HttpMethod.GET, "/countries", "/cities").permitAll()
                         .anyRequest().authenticated());
