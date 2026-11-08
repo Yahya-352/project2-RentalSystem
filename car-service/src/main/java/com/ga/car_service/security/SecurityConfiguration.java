@@ -16,19 +16,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true) //check authorization first
-@RequiredArgsConstructor
 public class SecurityConfiguration {
 
-    private MyUserDetailsService myUserDetailsService;
 
     @Bean
     public JwtRequestFilter authenticationJwtTokenFilter(){
         return new JwtRequestFilter();
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder(){
-        return new BCryptPasswordEncoder();
     }
 
     //object to be created and destroyed once done from using it
@@ -59,11 +52,6 @@ public class SecurityConfiguration {
         return http.build();
     }
 
-    @Bean
-    public AuthenticationManager authenticationManager
-            (AuthenticationConfiguration authConfig) throws Exception{
-        return authConfig.getAuthenticationManager();
-    }
 
 }
 

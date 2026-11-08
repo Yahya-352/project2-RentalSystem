@@ -33,9 +33,9 @@ public class Car {
     @JoinColumn(name = "city_id" ,nullable = false)
     private City city;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+//    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
-    private User owner;
+    private Long ownerId;
 
     private int year;
     private String licensePlate;
