@@ -18,7 +18,7 @@ public record CarResponse(
         int seats,
         BigDecimal pricePerDay,
         boolean available,
-        String ownerUsername,
+        Long ownerId,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         List<Long> imageIds

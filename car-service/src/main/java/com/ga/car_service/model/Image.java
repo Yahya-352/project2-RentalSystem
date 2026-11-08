@@ -24,9 +24,9 @@ public class Image {
     @JoinColumn(name = "car_id")
     private Car car;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "user_id")
+    private Long userId;
 
     @CreationTimestamp
     private LocalDateTime uploadedAt;

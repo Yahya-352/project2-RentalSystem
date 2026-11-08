@@ -47,7 +47,6 @@ import static com.ga.car_service.specification.CarSpecification.*;
 @RequiredArgsConstructor
 public class CarService {
     private final CarRepository carRepository;
-    private final UserRepository userRepository;
 
     private final AuditClient auditClient;
     private final CategoryRepository categoryRepository;
@@ -69,8 +68,7 @@ public class CarService {
      */
     public CarResponse createCar(CarRequest carRequest ,
                                  Authentication authentication){
-        User owner = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new InformationNotFoundException("User not found"));
+        Long ownerId = (Long) authentication.getPrincipal();
 
         Car car = new Car();
         Make make = makeRepository.findById(carRequest.makeId())
@@ -87,7 +85,7 @@ public class CarService {
         car.setLicensePlate(carRequest.licensePlate());
         car.setSeats(carRequest.seats());
         car.setPricePerDay(carRequest.pricePerDay());
-        car.setOwner(owner);
+        car.setOwnerId(ownerId);
         car.setAvailable(true);
 
         try {
@@ -104,9 +102,9 @@ public class CarService {
 
         Car createdCar = carRepository.save(car);
 
-        String message = "User " + owner.getId() + " created Car " + createdCar.getId();
+        String message = "User " + ownerId + " created Car " + createdCar.getId();
         log.info(message);
-        auditClient.log(owner.getId(), "CAR_CREATED", "Car", createdCar.getId(), message);
+        auditClient.log(ownerId, "CAR_CREATED", "Car", createdCar.getId(), message);
 
         return toCarResponse(createdCar);
     }
@@ -213,9 +211,8 @@ public class CarService {
      * @throws InformationNotFoundException if the user does not exist
      */
     public List<CarResponse> getMyCars(Authentication authentication){
-        User owner = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new InformationNotFoundException("User Not Found"));
-        List<Car> cars = carRepository.findByOwnerId(owner.getId());
+        Long ownerId = (Long) authentication.getPrincipal();
+        List<Car> cars = carRepository.findByOwnerId(ownerId);
         return cars.stream().filter(car -> !car.isDeleted()).map(car ->toCarResponse(car)).toList();
     }
 
@@ -232,8 +229,7 @@ public class CarService {
      * @throws BadRequestException          if the transmission or fuel type is not a valid value
      */
     public CarResponse updateCar(Long id, CarRequest carRequest, Authentication authentication) {
-        User currentUser = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new InformationNotFoundException("User not found"));
+        Long ownerId = (Long) authentication.getPrincipal();
 
         Car car = carRepository.findById(id)
                 .orElseThrow(() -> new InformationNotFoundException("Car not found"));
@@ -241,7 +237,7 @@ public class CarService {
             throw new InformationNotFoundException("Car Not Found");
         }
 
-        if (!car.getOwner().getId().equals(currentUser.getId())) {
+        if (!car.getOwnerId().equals(ownerId)) {
             throw new ForbiddenException("You do not own this car");
         }
 
@@ -275,9 +271,9 @@ public class CarService {
 
         Car updatedCar = carRepository.save(car);
 
-        String message = "User " + currentUser.getId() + " updated Car " + car.getId();
+        String message = "User " + ownerId + " updated Car " + car.getId();
         log.info(message);
-        auditClient.log(currentUser.getId(), "CAR_UPDATED", "Car", car.getId(), message);
+        auditClient.log(ownerId, "CAR_UPDATED", "Car", car.getId(), message);
 
         return toCarResponse(updatedCar);
     }
@@ -294,24 +290,23 @@ public class CarService {
      * @throws ForbiddenException           if the car belongs to another user
      */
     public void deleteCar(Long id , Authentication authentication){
-        User currentUser = userRepository.findByEmail(authentication.getName()).orElseThrow(
-                () -> new InformationNotFoundException("User not Found")
-        );
+        Long ownerId = (Long) authentication.getPrincipal();
+
         Car car = carRepository.findById(id).orElseThrow(
                 () -> new InformationNotFoundException("Car Not Found")
         );
         if(car.isDeleted()){
             throw new InformationNotFoundException("Car not found");
         }
-        if(!car.getOwner().getId().equals(currentUser.getId())){
+        if(!car.getOwnerId().equals(ownerId)){
             throw new ForbiddenException("You Do Not Own This Car");
         }
         car.setDeleted(true);
         car.setAvailable(false);
         carRepository.save(car);
-        String message = "User " + currentUser.getId() + " deleted Car " + car.getId();
+        String message = "User " + ownerId + " deleted Car " + car.getId();
         log.info(message);
-        auditClient.log(currentUser.getId(), "CAR_DELETED", "Car", car.getId(), message);
+        auditClient.log(ownerId, "CAR_DELETED", "Car", car.getId(), message);
     }
 
     /**
@@ -336,7 +331,7 @@ public class CarService {
                 car.getSeats(),
                 car.getPricePerDay(),
                 car.isAvailable(),
-                car.getOwner().getUserName(),
+                car.getOwnerId(),
                 car.getCreatedAt(),
                 car.getUpdatedAt(),
                 imageRepository.findByCarId(car.getId()).stream().map(image -> image.getId()).toList()
@@ -358,8 +353,7 @@ public class CarService {
      *                                      cannot be stored
      */
     public void uploadImage(Long id, List<MultipartFile> files, Authentication authentication) {
-        User currentUser = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new InformationNotFoundException("User not found"));
+        Long ownerId = (Long) authentication.getPrincipal();
 
         Car car = carRepository.findById(id)
                 .orElseThrow(() -> new InformationNotFoundException("Car not found"));
@@ -368,7 +362,7 @@ public class CarService {
             throw new BadRequestException("No files uploaded");
         }
 
-        if (!car.getOwner().getId().equals(currentUser.getId())) {
+        if (!car.getOwnerId().equals(ownerId)) {
             throw new ForbiddenException("You do not own this car");
         }
         if (car.isDeleted()) {
