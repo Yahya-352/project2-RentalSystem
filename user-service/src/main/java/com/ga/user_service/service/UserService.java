@@ -46,7 +46,7 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
-//    private final EmailService emailService;
+    private final EmailService emailService;
 
     private final PasswordEncoder passwordEncoder;
     private final JWTUtils jwtUtils;
@@ -61,7 +61,7 @@ public class UserService {
      * security configuration.
      *
      * @param userRepository        access to the users table
-//     * @param emailService          sends verification and recovery emails
+     * @param emailService          sends verification and recovery emails
 //     * @param auditLogService       records important actions
      * @param passwordEncoder       hashes and checks passwords
      * @param jwtUtils              creates JWT tokens
@@ -69,7 +69,7 @@ public class UserService {
      */
     @Autowired
     public UserService(UserRepository userRepository,
-//                       EmailService emailService,
+                       EmailService emailService,
 //                       AuditLogService auditLogService,
                        @Lazy PasswordEncoder passwordEncoder,
                        JWTUtils jwtUtils,
@@ -77,7 +77,7 @@ public class UserService {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
-//        this.emailService = emailService;
+        this.emailService = emailService;
         this.authenticationManager = authenticationManager;
 //        this.auditLogService = auditLogService;
     }
@@ -140,8 +140,8 @@ public class UserService {
 
         User createdUser = userRepository.save(user);
 
-//        emailService.sendEmail(user.getEmail(), "Verify your account",
-//                "Click to verify: " + link);
+        emailService.sendEmail(user.getEmail(), "Verify your account",
+                "Click to verify: " + link);
 
         String message = "User " + createdUser.getId() + " registered as " + role;
         log.info(message);
@@ -206,8 +206,8 @@ public class UserService {
         userRepository.save(user);
 
         String link = "http://localhost:8080/users/verify?token=" + token;
-//        emailService.sendEmail(user.getEmail(), "Verify your account",
-//                "Click to verify: " + link);
+        emailService.sendEmail(user.getEmail(), "Verify your account",
+                "Click to verify: " + link);
 
         return "Email Sent Successfully";
     }
@@ -237,8 +237,8 @@ public class UserService {
 
         //send the email
         String link = "http://localhost:8080/users/reset-password?token=" + passwordRecoveryToken;
-//        emailService.sendEmail(user.getEmail(), "Recover your password",
-//                "Click to reset your password: " + link);
+        emailService.sendEmail(user.getEmail(), "Recover your password",
+                "Click to reset your password: " + link);
 
         return "Email Sent Successfully";
     }
