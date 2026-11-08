@@ -1,6 +1,6 @@
 package com.ga.user_service.security;
 
-import com.ga.RentalSystem.service.RateLimitService;
+import com.ga.user_service.service.RateLimitService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
