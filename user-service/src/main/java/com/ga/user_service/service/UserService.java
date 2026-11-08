@@ -205,7 +205,7 @@ public class UserService {
         user.setVerificationTokenExpiryDate(LocalDateTime.now().plusHours(1));
         userRepository.save(user);
 
-        String link = "http://localhost:8080/users/verify?token=" + token;
+        String link = "http://localhost:8081/users/verify?token=" + token;
         emailService.sendEmail(user.getEmail(), "Verify your account",
                 "Click to verify: " + link);
 
@@ -236,7 +236,7 @@ public class UserService {
         userRepository.save(user);
 
         //send the email
-        String link = "http://localhost:8080/users/reset-password?token=" + passwordRecoveryToken;
+        String link = "http://localhost:8081/users/reset-password?token=" + passwordRecoveryToken;
         emailService.sendEmail(user.getEmail(), "Recover your password",
                 "Click to reset your password: " + link);
 
