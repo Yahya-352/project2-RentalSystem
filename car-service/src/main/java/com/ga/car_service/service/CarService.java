@@ -184,7 +184,7 @@ public class CarService {
             spec = spec.and(minSeats(request.minSeats()));
         }
         if (request.startDate() != null && request.endDate() != null) {
-            spec = spec.and(availableBetween(request.startDate(), request.endDate()));
+//            spec = spec.and(availableBetween(request.startDate(), request.endDate()));
         }
         return spec;
     }

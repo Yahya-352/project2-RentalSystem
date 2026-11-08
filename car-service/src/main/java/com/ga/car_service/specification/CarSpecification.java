@@ -82,21 +82,21 @@ public class CarSpecification {
      * @param startDate the requested pick-up date
      * @param endDate   the requested return date
      */
-    public static Specification<Car> availableBetween(LocalDate startDate, LocalDate endDate){
-        return (root, query, cb) -> {
-            Subquery<Long> subquery = query.subquery(Long.class);
-            Root<Booking> bookings = subquery.from(Booking.class);
-
-            subquery.select(bookings.get("id"));
-
-            subquery.where(
-                    cb.equal(bookings.get("car") , root),
-                    cb.equal(bookings.get("status") , BookingStatus.APPROVED),
-                    cb.lessThan(bookings.get("startDate") ,endDate),
-                    cb.greaterThan(bookings.get("endDate") ,startDate));
-
-            return cb.not(cb.exists(subquery)); //return cars that do not exist in subquery
-        };
-    }
+//    public static Specification<Car> availableBetween(LocalDate startDate, LocalDate endDate){
+//        return (root, query, cb) -> {
+//            Subquery<Long> subquery = query.subquery(Long.class);
+//            Root<Booking> bookings = subquery.from(Booking.class);
+//
+//            subquery.select(bookings.get("id"));
+//
+//            subquery.where(
+//                    cb.equal(bookings.get("car") , root),
+//                    cb.equal(bookings.get("status") , BookingStatus.APPROVED),
+//                    cb.lessThan(bookings.get("startDate") ,endDate),
+//                    cb.greaterThan(bookings.get("endDate") ,startDate));
+//
+//            return cb.not(cb.exists(subquery)); //return cars that do not exist in subquery
+//        };
+//    }
 
 }

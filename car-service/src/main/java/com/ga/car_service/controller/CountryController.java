@@ -1,7 +1,7 @@
 package com.ga.car_service.controller;
 
-import com.ga.RentalSystem.dto.response.CountryResponse;
-import com.ga.RentalSystem.service.CountryService;
+import com.ga.car_service.dto.response.CountryResponse;
+import com.ga.car_service.service.CountryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

@@ -1,8 +1,8 @@
 package com.ga.car_service.controller;
 
-import com.ga.RentalSystem.dto.request.MakeRequest;
-import com.ga.RentalSystem.dto.response.MakeResponse;
-import com.ga.RentalSystem.service.MakeService;
+import com.ga.car_service.dto.request.MakeRequest;
+import com.ga.car_service.dto.response.MakeResponse;
+import com.ga.car_service.service.MakeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

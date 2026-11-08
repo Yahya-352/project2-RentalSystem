@@ -1,5 +1,6 @@
 package com.ga.RentalSystem.security;
 
+import com.ga.RentalSystem.model.User;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +23,8 @@ public class JWTUtils {
 
     public String generateJwtToken(MyUserDetails myUserDetails){
         return Jwts.builder().setSubject(myUserDetails.getUsername())
+                .claim("userId" , myUserDetails.getUser().getId())
+                .claim("role" , myUserDetails.getUser().getRoleEnum().name())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(new Date().getTime() + jwtExpirationMs))
                 .signWith(SignatureAlgorithm.HS256 , jwtSecret).compact();
