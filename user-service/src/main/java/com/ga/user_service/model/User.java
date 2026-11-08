@@ -9,8 +9,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+
 
 @Data
 @Entity
@@ -53,8 +52,8 @@ public class User {
     @Column
     private LocalDateTime passwordRecoveryTokenExpiryDate;
 
-    @OneToMany(mappedBy = "renter", cascade = CascadeType.ALL)
-    private List<Booking> rentals = new ArrayList<>();
+//    @OneToMany(mappedBy = "renter", cascade = CascadeType.ALL)
+//    private List<Booking> rentals = new ArrayList<>();
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private UserProfile profile;
