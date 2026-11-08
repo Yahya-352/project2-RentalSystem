@@ -35,6 +35,7 @@ public class Car {
 
 //    @ManyToOne(fetch = FetchType.LAZY)
 //    @JoinColumn(name = "owner_id", nullable = false)
+    @Column(name = "owner_id", nullable = false)
     private Long ownerId;
 
     private int year;
