@@ -1,8 +1,7 @@
 package com.ga.user_service.exceptions;
 
-import com.ga.RentalSystem.dto.response.ErrorResponse;
-import com.ga.RentalSystem.exceptions.BadRequestException;
-import com.ga.RentalSystem.exceptions.ForbiddenException;
+
+import com.ga.user_service.dto.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.HttpStatus;
