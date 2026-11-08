@@ -1,6 +1,7 @@
 package com.ga.car_service.service;
 
 
+import com.ga.car_service.client.AuditClient;
 import com.ga.car_service.dto.request.CarRequest;
 import com.ga.car_service.dto.request.CarSearchRequest;
 import com.ga.car_service.dto.response.CarResponse;
@@ -48,7 +49,7 @@ public class CarService {
     private final CarRepository carRepository;
     private final UserRepository userRepository;
 
-    private final AuditLogService auditLogService;
+    private final AuditClient auditClient;
     private final CategoryRepository categoryRepository;
     private final MakeRepository makeRepository;
 
@@ -105,7 +106,7 @@ public class CarService {
 
         String message = "User " + owner.getId() + " created Car " + createdCar.getId();
         log.info(message);
-        auditLogService.log(owner.getId(), "CAR_CREATED", "Car", createdCar.getId(), message);
+        auditClient.log(owner.getId(), "CAR_CREATED", "Car", createdCar.getId(), message);
 
         return toCarResponse(createdCar);
     }
@@ -276,7 +277,7 @@ public class CarService {
 
         String message = "User " + currentUser.getId() + " updated Car " + car.getId();
         log.info(message);
-        auditLogService.log(currentUser.getId(), "CAR_UPDATED", "Car", car.getId(), message);
+        auditClient.log(currentUser.getId(), "CAR_UPDATED", "Car", car.getId(), message);
 
         return toCarResponse(updatedCar);
     }
@@ -310,7 +311,7 @@ public class CarService {
         carRepository.save(car);
         String message = "User " + currentUser.getId() + " deleted Car " + car.getId();
         log.info(message);
-        auditLogService.log(currentUser.getId(), "CAR_DELETED", "Car", car.getId(), message);
+        auditClient.log(currentUser.getId(), "CAR_DELETED", "Car", car.getId(), message);
     }
 
     /**
