@@ -1,0 +1,26 @@
+[
+    {
+        "name":  "Bahrain",
+        "iso2":  "BH"
+    },
+    {
+        "name":  "Kuwait",
+        "iso2":  "KW"
+    },
+    {
+        "name":  "Oman",
+        "iso2":  "OM"
+    },
+    {
+        "name":  "Qatar",
+        "iso2":  "QA"
+    },
+    {
+        "name":  "Saudi Arabia",
+        "iso2":  "SA"
+    },
+    {
+        "name":  "United Arab Emirates",
+        "iso2":  "AE"
+    }
+]
