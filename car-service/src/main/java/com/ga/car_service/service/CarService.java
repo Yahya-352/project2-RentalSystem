@@ -4,18 +4,14 @@ package com.ga.car_service.service;
 import com.ga.car_service.dto.request.CarRequest;
 import com.ga.car_service.dto.request.CarSearchRequest;
 import com.ga.car_service.dto.response.CarResponse;
+import com.ga.car_service.dto.response.PageResponse;
 import com.ga.car_service.enums.FuelType;
 import com.ga.car_service.enums.TransmissionType;
 import com.ga.car_service.exceptions.BadRequestException;
+import com.ga.car_service.exceptions.ForbiddenException;
 import com.ga.car_service.exceptions.InformationNotFoundException;
-import com.ga.car_service.model.Car;
-import com.ga.car_service.model.Category;
-import com.ga.car_service.model.City;
-import com.ga.car_service.model.Make;
-import com.ga.car_service.repository.CarRepository;
-import com.ga.car_service.repository.CategoryRepository;
-import com.ga.car_service.repository.CityRepository;
-import com.ga.car_service.repository.MakeRepository;
+import com.ga.car_service.model.*;
+import com.ga.car_service.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -32,6 +28,9 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+
+import com.ga.car_service.specification.CarSpecification;
+import static com.ga.car_service.specification.CarSpecification.*;
 
 
 /**

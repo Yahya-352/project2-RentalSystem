@@ -1,5 +1,7 @@
 package com.ga.car_service.specification;
 
+import com.ga.car_service.enums.FuelType;
+import com.ga.car_service.enums.TransmissionType;
 import com.ga.car_service.model.Car;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
