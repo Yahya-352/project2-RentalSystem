@@ -1,0 +1,90 @@
+package com.ga.car_service.controller;
+
+import com.ga.car_service.dto.request.CarRequest;
+import com.ga.car_service.dto.request.CarSearchRequest;
+import com.ga.car_service.dto.response.CarResponse;
+import com.ga.car_service.service.CarService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+
+@Tag(name = "Cars", description = "Create, browse, update and delete car listings")
+@RestController
+@RequestMapping("/cars")
+@RequiredArgsConstructor
+public class CarController {
+    private final CarService carService;
+
+    @Operation(summary = "Create a car listing (agency only)")
+    @PreAuthorize("hasRole('AGENCY')")
+    @PostMapping("/create")
+    public ResponseEntity<CarResponse> createCar(@RequestBody @Valid CarRequest carRequest ,
+                                                 Authentication authentication){
+        CarResponse response = carService.createCar(carRequest, authentication);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @Operation(summary = "Search cars; all filters are optional and combined",
+            description = "Filters: cityId, countryId, categoryId, makeId, minPrice, maxPrice, transmission, "
+                    + "fuelType, minSeats, and startDate + endDate (yyyy-MM-dd, both or neither) to return only "
+                    + "cars with no approved booking overlapping those dates. Supports page, size and sort.")
+    @GetMapping("/")
+    public PageResponse<CarResponse> getCars(@ParameterObject @ModelAttribute @Valid CarSearchRequest request,
+                                             @ParameterObject @PageableDefault(size = 10) Pageable pageable) {
+        return carService.getCars(request, pageable);
+    }
+
+    @Operation(summary = "get a Car By its id")
+    @GetMapping("/{id}")
+    public CarResponse getCarById(@PathVariable Long id) {
+        return carService.getCarById(id);
+    }
+
+    @Operation(summary = "View your own cars (owner(agency) of cars only)")
+    @PreAuthorize("hasRole('AGENCY')")
+    @GetMapping("/my-cars")
+    public List<CarResponse> getMyCars(Authentication authentication) {
+        return carService.getMyCars(authentication);
+    }
+
+    @Operation(summary = "update a car listing (Owner(Agency) of cars only)")
+    @PreAuthorize("hasRole('AGENCY')")
+    @PutMapping("/update/{id}")
+    public CarResponse updateCar(@PathVariable Long id,
+                                                 @RequestBody @Valid CarRequest carRequest,
+                                                 Authentication authentication) {
+        return carService.updateCar(id, carRequest, authentication);
+    }
+
+    @Operation(summary = "delete a car listing (Owner(agency) of cars only)")
+    @PreAuthorize("hasRole('AGENCY')")
+    @ResponseStatus(HttpStatus.NO_CONTENT) // 204
+    @DeleteMapping("/delete/{id}")
+    public void deleteCar(@PathVariable Long id , Authentication authentication){
+        carService.deleteCar(id , authentication);
+    }
+
+    @Operation(summary = "Upload image of cars (agency only)")
+    @PreAuthorize("hasRole('AGENCY')")
+    @PostMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> uploadImage(@PathVariable Long id,
+                                            @RequestParam("file") List<MultipartFile> files,
+                                            Authentication authentication) {
+        carService.uploadImage(id, files, authentication);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+}
