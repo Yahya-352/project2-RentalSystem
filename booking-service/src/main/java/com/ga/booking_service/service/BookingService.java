@@ -3,6 +3,7 @@ package com.ga.booking_service.service;
 import com.ga.booking_service.client.AuditClient;
 import com.ga.booking_service.client.CarClient;
 import com.ga.booking_service.client.CarSummary;
+import com.ga.booking_service.client.NotificationClient;
 import com.ga.booking_service.dto.request.BookingRequest;
 import com.ga.booking_service.dto.response.BookingCalenderDatesResponse;
 import com.ga.booking_service.dto.response.BookingResponse;
@@ -46,7 +47,7 @@ public class BookingService {
     private final BookingRepository bookingRepository;
 
 
-//    private final NotificationService notificationService;
+    private final NotificationClient notificationClient;
     private final AuditClient auditClient;
     private final CarClient carClient;
 //    private final StripeService stripeService;
@@ -105,7 +106,7 @@ public class BookingService {
 
         BookingResponse response = toResponse(saved);
         //notification
-//        notificationService.sendEvent(car.getOwner().getId(), "BOOKING_CREATED", response);
+        notificationClient.sendEvent(carSummary.ownerId(), "BOOKING_CREATED", response);
 
         //logging
         String message = "Booking " + booking.getId() + " created by user " + renterId;
@@ -209,7 +210,7 @@ public class BookingService {
         log.info(message);
         auditClient.log(ownerId, "BOOKING_APPROVED", "Booking", booking.getId(), message);
 
-//        notificationService.sendEvent(booking.getRenter().getId(), "BOOKING_APPROVED", response);
+        notificationClient.sendEvent(booking.getRenterId(), "BOOKING_APPROVED", response);
         return response;
     }
 
@@ -248,7 +249,7 @@ public class BookingService {
         auditClient.log(ownerId, "BOOKING_REJECTED", "Booking", booking.getId(), message);
 
 
-//        notificationService.sendEvent(booking.getRenter().getId(), "BOOKING_REJECTED", response);
+        notificationClient.sendEvent(booking.getRenterId(), "BOOKING_REJECTED", response);
         return response;
     }
 
@@ -300,7 +301,7 @@ public class BookingService {
         BookingResponse response = toResponse(bookingRepository.save(booking));
         auditClient.log(loggedIn, "BOOKING_CANCELLED", "Booking", booking.getId(), message);
         Long notifyUserId = isRenter ? booking.getOwnerId() : booking.getRenterId();
-//        notificationService.sendEvent(notifyUserId, "BOOKING_CANCELLED", response);
+        notificationClient.sendEvent(notifyUserId, "BOOKING_CANCELLED", response);
         return response;
     }
 
