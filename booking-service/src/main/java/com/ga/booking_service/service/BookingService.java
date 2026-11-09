@@ -99,7 +99,7 @@ public class BookingService {
 
         BookingResponse response = toResponse(saved);
         //notification
-        notificationService.sendEvent(car.getOwner().getId(), "BOOKING_CREATED", response);
+//        notificationService.sendEvent(car.getOwner().getId(), "BOOKING_CREATED", response);
 
         //logging
         String message = "Booking " + booking.getId() + " created by user " + renterId;
@@ -206,7 +206,7 @@ public class BookingService {
         log.info(message);
         auditClient.log(currentUser.getId(), "BOOKING_APPROVED", "Booking", booking.getId(), message);
 
-        notificationService.sendEvent(booking.getRenter().getId(), "BOOKING_APPROVED", response);
+//        notificationService.sendEvent(booking.getRenter().getId(), "BOOKING_APPROVED", response);
         return response;
     }
 
@@ -244,7 +244,7 @@ public class BookingService {
         auditClient.log(currentUser.getId(), "BOOKING_REJECTED", "Booking", booking.getId(), message);
 
 
-        notificationService.sendEvent(booking.getRenter().getId(), "BOOKING_REJECTED", response);
+//        notificationService.sendEvent(booking.getRenter().getId(), "BOOKING_REJECTED", response);
         return response;
     }
 
@@ -295,7 +295,7 @@ public class BookingService {
         BookingResponse response = toResponse(bookingRepository.save(booking));
         auditClient.log(currentUser.getId(), "BOOKING_CANCELLED", "Booking", booking.getId(), message);
         Long notifyUserId = isRenter ? booking.getCar().getOwner().getId() : booking.getRenter().getId();
-        notificationService.sendEvent(notifyUserId, "BOOKING_CANCELLED", response);
+//        notificationService.sendEvent(notifyUserId, "BOOKING_CANCELLED", response);
         return response;
     }
 
