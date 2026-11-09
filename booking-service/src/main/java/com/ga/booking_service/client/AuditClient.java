@@ -12,7 +12,7 @@ import java.util.Map;
 @Slf4j
 public class AuditClient {
 
-    RestClient restClient;
+    private final RestClient restClient;
     private String apikey;
 
     public AuditClient(@Value("${audit-service.url}") String baseUrl,
