@@ -1,7 +1,7 @@
 package com.ga.car_service.service;
 
 
-import com.ga.car_service.exceptions.InformationNotFoundException;
+import com.ga.common.exceptions.InformationNotFoundException;
 import com.ga.car_service.model.Image;
 import com.ga.car_service.repository.ImageRepository;
 import lombok.RequiredArgsConstructor;

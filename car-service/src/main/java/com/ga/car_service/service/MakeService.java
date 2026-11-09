@@ -3,7 +3,7 @@ package com.ga.car_service.service;
 
 import com.ga.car_service.dto.request.MakeRequest;
 import com.ga.car_service.dto.response.MakeResponse;
-import com.ga.car_service.exceptions.InformationNotFoundException;
+import com.ga.common.exceptions.InformationNotFoundException;
 import com.ga.car_service.model.Make;
 import com.ga.car_service.repository.MakeRepository;
 import lombok.RequiredArgsConstructor;

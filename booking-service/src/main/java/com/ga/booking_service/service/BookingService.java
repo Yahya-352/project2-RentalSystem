@@ -157,7 +157,7 @@ public class BookingService {
      */
     public List<BookingResponse> getBookingForMyCars(Authentication authentication){
         Long renterId = (Long) authentication.getPrincipal();
-        List<Booking> bookings = bookingRepository.findByCarOwnerId(renterId);
+        List<Booking> bookings = bookingRepository.findByOwnerId(renterId);
         return bookings.stream().map(booking ->toResponse(booking)).toList();
     }
 

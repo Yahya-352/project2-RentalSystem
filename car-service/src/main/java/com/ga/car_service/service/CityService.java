@@ -2,7 +2,7 @@ package com.ga.car_service.service;
 
 
 import com.ga.car_service.dto.response.CityResponse;
-import com.ga.car_service.exceptions.InformationNotFoundException;
+import com.ga.common.exceptions.InformationNotFoundException;
 import com.ga.car_service.model.City;
 import com.ga.car_service.repository.CityRepository;
 import com.ga.car_service.repository.CountryRepository;

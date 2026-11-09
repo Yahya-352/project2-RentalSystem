@@ -2,7 +2,7 @@ package com.ga.car_service.service;
 
 import com.ga.car_service.dto.request.CategoryRequest;
 import com.ga.car_service.dto.response.CategoryResponse;
-import com.ga.car_service.exceptions.InformationNotFoundException;
+import com.ga.common.exceptions.InformationNotFoundException;
 import com.ga.car_service.model.Category;
 import com.ga.car_service.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
