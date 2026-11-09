@@ -95,6 +95,7 @@ public class BookingService {
         Booking booking = new Booking();
         booking.setRenterId(renterId);
         booking.setCarId(carSummary.id());
+        booking.setOwnerId(carSummary.ownerId());
         booking.setStartDate(request.startDate());
         booking.setEndDate(request.endDate());
         booking.setTotalPrice(totalPrice);
@@ -176,36 +177,37 @@ public class BookingService {
      */
     private final ConcurrentHashMap<Long , ReentrantLock>  locks = new ConcurrentHashMap<>();
     public BookingResponse approveBooking(Long bookingId,Authentication authentication){
-        User currentUser = getCurrentUser(authentication);
+        Long ownerId = (Long) authentication.getPrincipal();
 
         Booking booking = bookingRepository.findById(bookingId).orElseThrow(() ->
                 new InformationNotFoundException("Booking Not Found"));
 
-        if (!booking.getCar().getOwner().getId().equals(currentUser.getId())) {
+        if (!booking.getOwnerId().equals(ownerId)) {
             throw new ForbiddenException("You do not own this car");
         }
-        ReentrantLock lock = locks.computeIfAbsent(booking.getCar().getId(), r -> new ReentrantLock());
+        ReentrantLock lock = locks.computeIfAbsent(booking.getCarId(), r -> new ReentrantLock());
         lock.lock();
         BookingResponse response;
         try{
             if (booking.getStatus() != BookingStatus.PENDING) {
                 throw new BadRequestException("Only pending bookings can be approved");
             }
-            if(isCarAvailable(booking.getCar().getId()
+            if(isCarAvailable(booking.getCarId()
                     , booking.getStartDate() , booking.getEndDate())){
 
                 booking.setStatus(BookingStatus.APPROVED);
                 response = toResponse(bookingRepository.save(booking));
             }else{
-                log.warn("Approve booking {} rejected: car {} already booked for these dates", bookingId, booking.getCar().getId());
+                log.warn("Approve booking {} rejected: car {} already booked for these dates", bookingId, booking.getCarId());
                 throw new ConflictException("Car is not available at this date");
             }
         }finally {
             lock.unlock();
         }
-        String message = "Booking " + booking.getId() + " approved by Agency " + currentUser.getId();
+        String message = "Booking " + booking.getId() + " approved by Agency " +
+                ownerId;
         log.info(message);
-        auditClient.log(currentUser.getId(), "BOOKING_APPROVED", "Booking", booking.getId(), message);
+        auditClient.log(ownerId, "BOOKING_APPROVED", "Booking", booking.getId(), message);
 
 //        notificationService.sendEvent(booking.getRenter().getId(), "BOOKING_APPROVED", response);
         return response;
@@ -223,11 +225,12 @@ public class BookingService {
      * @throws BadRequestException          if the booking is not pending
      */
     public BookingResponse rejectBooking(Long bookingId, Authentication authentication) {
-        User currentUser = getCurrentUser(authentication);
+        Long ownerId = (Long) authentication.getPrincipal();
+
         Booking booking = bookingRepository.findById(bookingId).orElseThrow(() ->
                 new InformationNotFoundException("Booking Not Found"));
 
-        if (!booking.getCar().getOwner().getId().equals(currentUser.getId())) {
+        if (!booking.getOwnerId().equals(ownerId)) {
             throw new ForbiddenException("You do not own this car");
         }
 
@@ -240,9 +243,9 @@ public class BookingService {
         BookingResponse response = toResponse(bookingRepository.save(booking));
 
 
-        String message = "Booking " + booking.getId() + " Rejected by Agency " + currentUser.getId();
+        String message = "Booking " + booking.getId() + " Rejected by Agency " + ownerId;
         log.info(message);
-        auditClient.log(currentUser.getId(), "BOOKING_REJECTED", "Booking", booking.getId(), message);
+        auditClient.log(ownerId, "BOOKING_REJECTED", "Booking", booking.getId(), message);
 
 
 //        notificationService.sendEvent(booking.getRenter().getId(), "BOOKING_REJECTED", response);
@@ -266,12 +269,12 @@ public class BookingService {
      *                                      completed
      */
     public BookingResponse cancelBooking(Long bookingId, Authentication authentication) {
-        User currentUser = getCurrentUser(authentication);
+        Long loggedIn = (Long) authentication.getPrincipal();
         Booking booking = bookingRepository.findById(bookingId).orElseThrow(() ->
                 new InformationNotFoundException("Booking Not Found"));
 
-        boolean isRenter = booking.getRenter().getId().equals(currentUser.getId());
-        boolean isOwner = booking.getCar().getOwner().getId().equals(currentUser.getId());
+        boolean isRenter = booking.getRenterId().equals(loggedIn);
+        boolean isOwner = booking.getOwnerId().equals(loggedIn);
 
         if (!isRenter && !isOwner) {
             throw new ForbiddenException("You are not involved in this booking");
@@ -283,19 +286,20 @@ public class BookingService {
             throw new BadRequestException("This booking cannot be cancelled");
         }
 
-        String message = "Booking " + booking.getId() + " cancelled by user " + currentUser.getId();
+        String message = "Booking " + booking.getId() + " cancelled by user " +
+                loggedIn;
 
         booking.setStatus(BookingStatus.CANCELLED);
 
         if(booking.isPaid()){
-            stripeService.refund(booking);
+//            stripeService.refund(booking);
             booking.setRefunded(true);
             message += ", payment refunded";
         }
         log.info(message);
         BookingResponse response = toResponse(bookingRepository.save(booking));
-        auditClient.log(currentUser.getId(), "BOOKING_CANCELLED", "Booking", booking.getId(), message);
-        Long notifyUserId = isRenter ? booking.getCar().getOwner().getId() : booking.getRenter().getId();
+        auditClient.log(loggedIn, "BOOKING_CANCELLED", "Booking", booking.getId(), message);
+        Long notifyUserId = isRenter ? booking.getOwnerId() : booking.getRenterId();
 //        notificationService.sendEvent(notifyUserId, "BOOKING_CANCELLED", response);
         return response;
     }
@@ -333,7 +337,7 @@ public class BookingService {
      */
     public PageResponse<BookingResponse> getAllBookings(Authentication authentication ,
                                                         String status , Pageable pageable) {
-        User currentUser = getCurrentUser(authentication);
+        Long loggedIn = (Long) authentication.getPrincipal();
 
         Page<Booking> bookings;
 
