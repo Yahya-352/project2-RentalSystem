@@ -1,6 +1,5 @@
 package com.ga.notification_service.controller;
 
-import com.ga.common.exceptions.InformationNotFoundException;
 import com.ga.notification_service.service.NotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

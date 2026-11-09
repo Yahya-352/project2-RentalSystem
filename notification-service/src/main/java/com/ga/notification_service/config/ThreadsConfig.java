@@ -1,0 +1,38 @@
+package com.ga.notification_service.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ThreadPoolExecutor;
+
+@Configuration
+@EnableAsync
+@EnableScheduling
+public class ThreadsConfig {
+
+    @Bean(name = "notificationExecutor")
+    public ThreadPoolTaskExecutor notificationExecutor() {
+        return createExecutor("notification-", 2, 4, 100,
+                new ThreadPoolExecutor.DiscardPolicy(), false);
+    }
+
+    private ThreadPoolTaskExecutor createExecutor(String prefix, int core, int max, int queue,
+                                                  RejectedExecutionHandler rejection,
+                                                  boolean waitOnShutdown) {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setThreadNamePrefix(prefix);
+        executor.setCorePoolSize(core);
+        executor.setMaxPoolSize(max);
+        executor.setQueueCapacity(queue);
+        executor.setRejectedExecutionHandler(rejection);
+        executor.setWaitForTasksToCompleteOnShutdown(waitOnShutdown);
+        executor.setAwaitTerminationSeconds(30);
+        executor.initialize();
+        return executor;
+    }
+
+}
