@@ -46,6 +46,7 @@ public class SecurityConfiguration {
                         ).permitAll()
                         // public lists for the location pickers, read-only
                         .requestMatchers(HttpMethod.GET, "/countries", "/cities").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/notifications").permitAll()
                         .anyRequest().authenticated());
         http.addFilterBefore(authenticationJwtTokenFilter() ,
                 UsernamePasswordAuthenticationFilter.class);
