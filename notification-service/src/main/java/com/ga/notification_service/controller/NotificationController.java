@@ -21,14 +21,12 @@ import java.io.IOException;
 public class NotificationController {
 
     private final NotificationService notificationService;
-    private final UserRepository userRepository;
 
     //finds logged in user then calls subscribe method which returns an SSE Emitter(open connection)
     @Operation(summary = "Open a live notification stream for the logged-in user")
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(Authentication authentication) throws IOException {
-        User user = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new InformationNotFoundException("User not found"));
-        return notificationService.subscribe(user.getId());
+        Long userId = (Long) authentication.getPrincipal();
+        return notificationService.subscribe(userId);
     }
 }
