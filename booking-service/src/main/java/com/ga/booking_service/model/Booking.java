@@ -25,6 +25,9 @@ public class Booking {
     @Column
     private Long carId;
 
+    @Column
+    private Long ownerId;
+
     @Column(nullable = false)
     private LocalDate startDate;
 

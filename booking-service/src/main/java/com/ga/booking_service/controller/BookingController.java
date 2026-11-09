@@ -30,8 +30,9 @@ public class BookingController {
     @PostMapping
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<BookingResponse> createBooking(@RequestBody @Valid BookingRequest request,
-                                                         Authentication authentication) {
-        BookingResponse response = bookingService.createBooking(request, authentication);
+                                                         Authentication authentication ,
+                                                         @RequestHeader("Authorization") String authHeader) {
+        BookingResponse response = bookingService.createBooking(request, authentication , authHeader);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

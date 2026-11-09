@@ -1,6 +1,8 @@
 package com.ga.booking_service.service;
 
 import com.ga.booking_service.client.AuditClient;
+import com.ga.booking_service.client.CarClient;
+import com.ga.booking_service.client.CarSummary;
 import com.ga.booking_service.dto.request.BookingRequest;
 import com.ga.booking_service.dto.response.BookingCalenderDatesResponse;
 import com.ga.booking_service.dto.response.BookingResponse;
@@ -46,6 +48,7 @@ public class BookingService {
 
 //    private final NotificationService notificationService;
     private final AuditClient auditClient;
+    private final CarClient carClient;
 //    private final StripeService stripeService;
 
     /**
@@ -55,6 +58,7 @@ public class BookingService {
      *
      * @param request        the car id, start date and end date
      * @param authentication the logged-in user, who becomes the renter
+     * @param authHeader
      * @return the created booking
      * @throws InformationNotFoundException if the user or car does not exist, or the car is
      *                                      deleted or unavailable
@@ -62,13 +66,14 @@ public class BookingService {
      *                                      start date is in the past
      * @throws ConflictException            if an approved booking already covers any of the dates
      */
-    public BookingResponse createBooking(BookingRequest request , Authentication authentication){
+    public BookingResponse createBooking(BookingRequest request ,
+                                         Authentication authentication,
+                                         String authHeader){
         Long renterId = (Long) authentication.getPrincipal();
 
-        Car car = carRepository.findById(request.carId())
-                .orElseThrow(() -> new InformationNotFoundException("Car not found"));
+        CarSummary carSummary = carClient.getCar(request.carId() , authHeader);
 
-        if(car.isDeleted() || !car.isAvailable()){
+        if(!carSummary.available()){
             throw new InformationNotFoundException("Car not found");
         }
 
@@ -85,11 +90,11 @@ public class BookingService {
         }
 
         long days = ChronoUnit.DAYS.between(request.startDate(), request.endDate());
-        BigDecimal totalPrice = car.getPricePerDay().multiply(BigDecimal.valueOf(days));
+        BigDecimal totalPrice = carSummary.pricePerDay().multiply(BigDecimal.valueOf(days));
 
         Booking booking = new Booking();
         booking.setRenterId(renterId);
-        booking.setCar(car);
+        booking.setCarId(carSummary.id());
         booking.setStartDate(request.startDate());
         booking.setEndDate(request.endDate());
         booking.setTotalPrice(totalPrice);
@@ -119,11 +124,7 @@ public class BookingService {
      * @throws InformationNotFoundException if the car does not exist or has been deleted
      */
     public List<BookingCalenderDatesResponse> getBookedDates(Long carId){
-        Car car = carRepository.findById(carId).orElseThrow(
-                () -> new InformationNotFoundException("Car not found"));
-        if(car.isDeleted()){
-            throw new InformationNotFoundException("Car not found");
-        }
+
         List<Booking> bookings = bookingRepository
                 .findByCarIdAndStatusAndEndDateAfterOrderByStartDateAsc
                         (carId , BookingStatus.APPROVED , LocalDate.now());

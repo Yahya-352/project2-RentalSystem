@@ -10,17 +10,13 @@ import java.time.LocalDateTime;
 public record BookingResponse(
         Long id,
         Long carId,
-        String make,
-        String model,
         Long renterId,
         LocalDate startDate,
         LocalDate endDate,
         BigDecimal totalPrice,
         BookingStatus status,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt,
-        boolean paid,
-        boolean refunded
+        LocalDateTime updatedAt
 ) {
     /**
      * Builds the response from a booking entity. It lives here, not in a service, so that both
@@ -31,17 +27,13 @@ public record BookingResponse(
      */
     public static BookingResponse from(Booking booking) {
         return new BookingResponse(booking.getId(),
-                booking.getCar().getId(),
-                booking.getCar().getMake().getName(),
-                booking.getCar().getModel(),
-                booking.getRenter().getId(),
+                booking.getCarId(),
+                booking.getRenterId(),
                 booking.getStartDate(),
                 booking.getEndDate(),
                 booking.getTotalPrice(),
                 booking.getStatus(),
                 booking.getCreatedAt(),
-                booking.getUpdatedAt(),
-                booking.isPaid(),
-                booking.isRefunded());
+                booking.getUpdatedAt());
     }
 }
