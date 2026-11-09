@@ -19,13 +19,11 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "renter_id", nullable = false)
-    private User renter;
+    @Column
+    private Long renterId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "car_id", nullable = false)
-    private Car car;
+    @Column
+    private Long carId;
 
     @Column(nullable = false)
     private LocalDate startDate;

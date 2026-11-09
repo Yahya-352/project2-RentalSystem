@@ -1,22 +1,20 @@
 package com.ga.booking_service.service;
 
 import com.ga.booking_service.client.AuditClient;
-import com.ga.booking_service.client.auditClient;
 import com.ga.booking_service.dto.request.BookingRequest;
 import com.ga.booking_service.dto.response.BookingCalenderDatesResponse;
 import com.ga.booking_service.dto.response.BookingResponse;
-import com.ga.booking_service.dto.response.PageResponse;
 import com.ga.booking_service.enums.BookingStatus;
-import com.ga.booking_service.exceptions.BadRequestException;
-import com.ga.booking_service.exceptions.ConflictException;
-import com.ga.booking_service.exceptions.ForbiddenException;
-import com.ga.booking_service.exceptions.InformationNotFoundException;
+
 import com.ga.booking_service.model.Booking;
-import com.ga.booking_service.model.Car;
-import com.ga.booking_service.model.User;
+
 import com.ga.booking_service.repository.BookingRepository;
-import com.ga.booking_service.repository.CarRepository;
-import com.ga.booking_service.repository.UserRepository;
+
+import com.ga.common.dto.response.PageResponse;
+import com.ga.common.exceptions.BadRequestException;
+import com.ga.common.exceptions.ConflictException;
+import com.ga.common.exceptions.ForbiddenException;
+import com.ga.common.exceptions.InformationNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -44,12 +42,11 @@ import java.util.concurrent.locks.ReentrantLock;
 @RequiredArgsConstructor
 public class BookingService {
     private final BookingRepository bookingRepository;
-    private final CarRepository carRepository;
-    private final UserRepository userRepository;
 
-    private final NotificationService notificationService;
+
+//    private final NotificationService notificationService;
     private final AuditClient auditClient;
-    private final StripeService stripeService;
+//    private final StripeService stripeService;
 
     /**
      * Creates a booking request for a car. The total price is the car's price per day
@@ -66,7 +63,7 @@ public class BookingService {
      * @throws ConflictException            if an approved booking already covers any of the dates
      */
     public BookingResponse createBooking(BookingRequest request , Authentication authentication){
-        User renter = getCurrentUser(authentication);
+        Long renterId = (Long) authentication.getPrincipal();
 
         Car car = carRepository.findById(request.carId())
                 .orElseThrow(() -> new InformationNotFoundException("Car not found"));
@@ -91,7 +88,7 @@ public class BookingService {
         BigDecimal totalPrice = car.getPricePerDay().multiply(BigDecimal.valueOf(days));
 
         Booking booking = new Booking();
-        booking.setRenter(renter);
+        booking.setRenterId(renterId);
         booking.setCar(car);
         booking.setStartDate(request.startDate());
         booking.setEndDate(request.endDate());
@@ -105,9 +102,9 @@ public class BookingService {
         notificationService.sendEvent(car.getOwner().getId(), "BOOKING_CREATED", response);
 
         //logging
-        String message = "Booking " + booking.getId() + " created by user " + renter.getId();
+        String message = "Booking " + booking.getId() + " created by user " + renterId;
         log.info(message);
-        auditClient.log(renter.getId(), "BOOKING_CREATED", "Booking", saved.getId(), message);
+        auditClient.log(renterId, "BOOKING_CREATED", "Booking", saved.getId(), message);
         return response;
     }
 
@@ -144,8 +141,8 @@ public class BookingService {
      * @throws InformationNotFoundException if the user does not exist
      */
     public List<BookingResponse> getMyBookings(Authentication authentication){
-        User currentUser = getCurrentUser(authentication);
-        List<Booking> bookings = bookingRepository.findByRenterId(currentUser.getId());
+        Long renterId = (Long) authentication.getPrincipal();
+        List<Booking> bookings = bookingRepository.findByRenterId(renterId);
         return bookings.stream().map(booking ->toResponse(booking)).toList();
     }
 
@@ -157,8 +154,8 @@ public class BookingService {
      * @throws InformationNotFoundException if the user does not exist
      */
     public List<BookingResponse> getBookingForMyCars(Authentication authentication){
-        User currentUser = getCurrentUser(authentication);
-        List<Booking> bookings = bookingRepository.findByCarOwnerId(currentUser.getId());
+        Long renterId = (Long) authentication.getPrincipal();
+        List<Booking> bookings = bookingRepository.findByCarOwnerId(renterId);
         return bookings.stream().map(booking ->toResponse(booking)).toList();
     }
 
@@ -319,18 +316,6 @@ public class BookingService {
                 .noneMatch(b -> startDate.isBefore(b.getEndDate())
                         && endDate.isAfter(b.getStartDate()));
         return overlap;
-    }
-
-    /**
-     * Finds the logged-in user in the database.
-     *
-     * @param authentication the logged-in user
-     * @return the user entity
-     * @throws InformationNotFoundException if the user does not exist
-     */
-    private User getCurrentUser(Authentication authentication) {
-        return userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new InformationNotFoundException("User not found"));
     }
 
     /**
