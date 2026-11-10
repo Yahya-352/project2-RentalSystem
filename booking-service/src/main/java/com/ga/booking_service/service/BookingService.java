@@ -365,6 +365,21 @@ public class BookingService {
         return PageResponse.from(responsePage);
     }
 
+    public void markPaid(Long bookingId){
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(
+                () -> new InformationNotFoundException("Booking Not Found")
+        );
+        booking.setPaid(true);
+        bookingRepository.save(booking);
+    }
+    public void markRefund(Long bookingId){
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(
+                () -> new InformationNotFoundException("Booking Not Found")
+        );
+        booking.setPaid(false);
+        bookingRepository.save(booking);
+    }
+
     /**
      * Converts a {@link Booking} entity into a {@link BookingResponse}, so every method
      * returns the same shape. The mapping itself lives in {@link BookingResponse#from(Booking)},
