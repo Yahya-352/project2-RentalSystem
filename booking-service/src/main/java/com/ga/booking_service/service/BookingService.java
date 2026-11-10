@@ -149,6 +149,13 @@ public class BookingService {
         return bookings.stream().map(booking ->toResponse(booking)).toList();
     }
 
+    public BookingResponse getBookingById(Long id){
+        Booking booking =  bookingRepository.findById(id)
+                .orElseThrow(() -> new InformationNotFoundException("Booking Not Found"));
+
+        return toResponse(booking);
+    }
+
     /**
      * Returns every booking made on the cars owned by the logged-in user.
      *

@@ -92,4 +92,8 @@ public class BookingController {
     public List<BookingCalenderDatesResponse> getBookedDates(@PathVariable Long carId) {
         return bookingService.getBookedDates(carId);
     }
+
+    public BookingResponse getBookingById(Long id){
+        return bookingService.getBookingById(id);
+    }
 }

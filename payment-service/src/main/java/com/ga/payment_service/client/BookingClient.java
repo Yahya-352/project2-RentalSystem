@@ -10,8 +10,11 @@ public class BookingClient {
         restClient = RestClient.create(baseUrl);
     }
 
-    public void getBooking(){
-
+    public BookingDTO getBooking(Long bookingId){
+        return restClient.get()
+                .uri()
+                .retrieve()
+                .body(BookingDTO.class);
     }
 
 }
