@@ -93,6 +93,7 @@ public class BookingController {
         return bookingService.getBookedDates(carId);
     }
 
+    @GetMapping("/{id}")
     public BookingResponse getBookingById(Long id){
         return bookingService.getBookingById(id);
     }

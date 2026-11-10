@@ -12,7 +12,7 @@ public class BookingClient {
 
     public BookingDTO getBooking(Long bookingId){
         return restClient.get()
-                .uri()
+                .uri("/bookings/{id}")
                 .retrieve()
                 .body(BookingDTO.class);
     }
