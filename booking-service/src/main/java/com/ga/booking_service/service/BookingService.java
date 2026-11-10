@@ -1,9 +1,6 @@
 package com.ga.booking_service.service;
 
-import com.ga.booking_service.client.AuditClient;
-import com.ga.booking_service.client.CarClient;
-import com.ga.booking_service.client.CarSummary;
-import com.ga.booking_service.client.NotificationClient;
+import com.ga.booking_service.client.*;
 import com.ga.booking_service.dto.request.BookingRequest;
 import com.ga.booking_service.dto.response.BookingCalenderDatesResponse;
 import com.ga.booking_service.dto.response.BookingResponse;
@@ -18,6 +15,7 @@ import com.ga.common.exceptions.BadRequestException;
 import com.ga.common.exceptions.ConflictException;
 import com.ga.common.exceptions.ForbiddenException;
 import com.ga.common.exceptions.InformationNotFoundException;
+import com.stripe.StripeClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -50,7 +48,7 @@ public class BookingService {
     private final NotificationClient notificationClient;
     private final AuditClient auditClient;
     private final CarClient carClient;
-//    private final StripeService stripeService;
+    private final PaymentClient paymentClient;
 
     /**
      * Creates a booking request for a car. The total price is the car's price per day
@@ -299,8 +297,9 @@ public class BookingService {
         booking.setStatus(BookingStatus.CANCELLED);
 
         if(booking.isPaid()){
-//            stripeService.refund(booking);
+            paymentClient.refund(booking.getId());
             booking.setRefunded(true);
+            booking.setPaid(false);
             message += ", payment refunded";
         }
         log.info(message);

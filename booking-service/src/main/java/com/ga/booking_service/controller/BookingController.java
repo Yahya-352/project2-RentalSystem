@@ -29,7 +29,7 @@ public class BookingController {
     private final BookingService bookingService;
 
     @Value("${INTERNAL_API_KEY}")
-    private final String internalApiKey;
+    private String internalApiKey;
 
     @Operation(summary = "Create a booking for a car (customer only)")
     @PostMapping

@@ -40,18 +40,18 @@ public class BookingClient {
         }
         catch (RestClientException ex){
             log.error("booking-service unavailable: {}", ex.getMessage());
-            throw new BadRequestException("Car service is unavailable, try again later");
+            throw new BadRequestException("Booking service is unavailable, try again later");
         }
     }
 
     public void markPaid(Long bookingId){
-        restClient.patch().uri("/{id}/paid" , bookingId)
+        restClient.patch().uri("/bookings/{id}/paid" , bookingId)
                 .header("X-Internal-Key", apiKey)
                 .retrieve().toBodilessEntity();
     }
 
     public void markRefunded(Long bookingId){
-        restClient.patch().uri("/{id}/refund" , bookingId)
+        restClient.patch().uri("/bookings/{id}/refund" , bookingId)
                 .header("X-Internal-Key", apiKey)
                 .retrieve().toBodilessEntity();
     }

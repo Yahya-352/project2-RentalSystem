@@ -55,4 +55,10 @@ public class StripeController {
         }
     }
 
+    @PostMapping("/refund/{bookingId}")
+    public void refund(@PathVariable Long bookingId ,
+                       @RequestHeader(value = "X-Internal-Key", required = false) String apiKey){
+        stripeService.refund(bookingId);
+    }
+
 }
