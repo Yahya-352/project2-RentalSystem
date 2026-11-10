@@ -3,7 +3,6 @@ package com.ga.payment_service.model;
 import com.ga.payment_service.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Data;
-import org.springframework.data.annotation.Id;
 
 import java.math.BigDecimal;
 
@@ -16,7 +15,13 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-//    @ManyToOne(fetch = FetchType.LAZY)
+    @Column
+    private String renterId;
+
+    @Column
+    private String ownerId;
+
+    @Column
     private Long bookingId;
 
     @Column(precision = 10, scale = 3)
