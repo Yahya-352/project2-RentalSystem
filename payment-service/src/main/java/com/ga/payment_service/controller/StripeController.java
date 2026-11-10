@@ -2,6 +2,7 @@ package com.ga.payment_service.controller;
 
 
 import com.ga.common.exceptions.BadRequestException;
+import com.ga.common.exceptions.ForbiddenException;
 import com.ga.payment_service.dto.response.PaymentResponse;
 import com.ga.payment_service.service.StripeService;
 import com.stripe.exception.SignatureVerificationException;
@@ -21,6 +22,9 @@ public class StripeController {
 
     private final StripeService stripeService;
     private final String StripeWebHookSecret;
+
+    @Value("${INTERNAL_API_KEY}")
+    private String internalApiKey;
 
     public StripeController(StripeService stripeService,
                             @Value("${app.stripe.webhook.secret}") String stripeWebHookSecret) {
@@ -58,6 +62,10 @@ public class StripeController {
     @PostMapping("/refund/{bookingId}")
     public void refund(@PathVariable Long bookingId ,
                        @RequestHeader(value = "X-Internal-Key", required = false) String apiKey){
+        if(!internalApiKey.equals(apiKey)){
+            throw new ForbiddenException("Invalid internal key");
+        }
+
         stripeService.refund(bookingId);
     }
 
