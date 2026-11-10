@@ -1,7 +1,9 @@
 package com.ga.payment_service.model;
 
-import com.ga.RentalSystem.enums.PaymentStatus;
+import com.ga.payment_service.enums.PaymentStatus;
+import jakarta.persistence.*;
 import lombok.Data;
+import org.springframework.data.annotation.Id;
 
 import java.math.BigDecimal;
 
@@ -14,8 +16,8 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    private Booking booking;
+//    @ManyToOne(fetch = FetchType.LAZY)
+    private Long bookingId;
 
     @Column(precision = 10, scale = 3)
     private BigDecimal amount;

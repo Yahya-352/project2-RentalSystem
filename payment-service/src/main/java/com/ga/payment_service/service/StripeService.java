@@ -141,7 +141,7 @@ public class StripeService {
         payment.setCurrency("USD");
         payment.setStatus(PaymentStatus.PENDING);
         payment.setSessionId(session.getId());
-        payment.setBooking(booking);
+        payment.setBookingId(bookingId);
         paymentRepository.save(payment);
         return paymentResponse;
     }
@@ -160,7 +160,7 @@ public class StripeService {
      * @param event the event, already checked against the webhook signing secret
      * @throws InformationNotFoundException if the event does not contain a checkout session
      */
-    public void capturePayment(Event event){
+    public void capturePayment(Event event , String authHeader){
         log.info("capture payment request");
         String type = event.getType();
 
@@ -179,7 +179,7 @@ public class StripeService {
 
 
         if(payment!=null){
-            BookingDTO booking = bookingClient.getBooking(bookingId);
+            BookingDTO booking = bookingClient.getBooking(bookingId , authHeader);
             if(payment.getStatus().equals(PaymentStatus.PENDING)){
                 if(event.getType().equals("checkout.session.completed")
                         && sessionRetrieved.getPaymentStatus().equals("paid")){
@@ -190,17 +190,17 @@ public class StripeService {
                     BookingResponse response = BookingResponse.from(booking);
                     String message = "Payment " + payment.getId() + " for booking " + booking.getId() + " completed";
                     log.info(message);
-                    auditClient.log(booking.getRenter().getId(), "PAYMENT_COMPLETED", "Payment", payment.getId(), message);
+                    auditClient.log(booking.renterId(), "PAYMENT_COMPLETED", "Payment", payment.getId(), message);
 
-                    notificationClient.sendEvent(booking.getRenter().getId(), "PAYMENT_RECEIVED", response);
+                    notificationClient.sendEvent(booking.renterId(), "PAYMENT_RECEIVED", response);
                     notificationClient.sendEvent(booking.getCar().getOwner().getId(), "BOOKING_PAID", response);
 
                 }else if (event.getType().equals("checkout.session.expired")){
                     payment.setStatus(PaymentStatus.FAILED);
                     String message = "Payment " + payment.getId() + " for booking " + booking.getId() + " expired";
                     log.info(message);
-                    auditClient.log(booking.getRenter().getId(), "PAYMENT_FAILED", "Payment", payment.getId(), message);
-                    notificationClient.sendEvent(booking.getRenter().getId(), "PAYMENT_FAILED", BookingResponse.from(booking));
+                    auditClient.log(booking.renterId(), "PAYMENT_FAILED", "Payment", payment.getId(), message);
+                    notificationClient.sendEvent(booking.renterId(), "PAYMENT_FAILED", BookingResponse.from(booking));
                 }
                 paymentRepository.save(payment);
             }
