@@ -5,6 +5,7 @@ import com.ga.booking_service.dto.response.BookingCalenderDatesResponse;
 import com.ga.booking_service.dto.response.BookingResponse;
 import com.ga.booking_service.service.BookingService;
 import com.ga.common.dto.response.PageResponse;
+import com.ga.common.exceptions.ForbiddenException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -106,12 +107,20 @@ public class BookingController {
     @PatchMapping("/{id}/paid")
     public void markPaid(@PathVariable Long id ,
                          @RequestHeader(value = "X-Internal-Key", required = false) String apiKey){
+        if (!internalApiKey.equals(apiKey)) {
+            throw new ForbiddenException("Invalid internal key");
+        }
+
         bookingService.markPaid(id);
     }
 
     @PatchMapping("/{id}/refund")
     public void markRefund(@PathVariable Long id ,
                            @RequestHeader(value = "X-Internal-Key", required = false) String apiKey){
+        if (!internalApiKey.equals(apiKey)) {
+            throw new ForbiddenException("Invalid internal key");
+        }
+
         bookingService.markRefund(id);
     }
 }

@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Map;
 
 
 /**
@@ -187,10 +188,12 @@ public class StripeService {
                     payment.setStatus(PaymentStatus.PAID);
                     bookingClient.markPaid(bookingId);
 
-                    BookingResponse response = BookingResponse.from(booking);
+
                     String message = "Payment " + payment.getId() + " for booking " + payment.getBookingId() + " completed";
                     log.info(message);
                     auditClient.log(payment.getRenterId(), "PAYMENT_COMPLETED", "Payment", payment.getId(), message);
+
+                    Map<String, Object> response = Map.of("bookingId", bookingId, "paymentId", payment.getId(), "status", "PAID");
 
                     notificationClient.sendEvent(payment.getRenterId(), "PAYMENT_RECEIVED", response);
                     notificationClient.sendEvent(payment.getOwnerId(), "BOOKING_PAID", response);
@@ -200,7 +203,8 @@ public class StripeService {
                     String message = "Payment " + payment.getId() + " for booking " + payment.getBookingId() + " expired";
                     log.info(message);
                     auditClient.log(payment.getRenterId(), "PAYMENT_FAILED", "Payment", payment.getId(), message);
-                    notificationClient.sendEvent(payment.getRenterId(), "PAYMENT_FAILED", BookingResponse.from(booking));
+
+                    notificationClient.sendEvent(payment.getRenterId(), "PAYMENT_FAILED", Map.of("bookingId", bookingId, "status", "FAILED"));
                 }
                 paymentRepository.save(payment);
             }
