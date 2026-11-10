@@ -42,7 +42,10 @@ public class SecurityConfiguration {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
-                                "/pay/webhook"
+                                "/pay/webhook",
+                                "/bookings/*/paid",
+                                "/bookings/*/refund",
+                                "/pay/refund/*"
                         ).permitAll()
                         // public lists for the location pickers, read-only
                         .requestMatchers(HttpMethod.GET, "/countries", "/cities").permitAll()
