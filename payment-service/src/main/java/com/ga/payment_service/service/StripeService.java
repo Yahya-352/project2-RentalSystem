@@ -184,19 +184,20 @@ public class StripeService {
                         && sessionRetrieved.getPaymentStatus().equals("paid")){
                     payment.setPaymentIntent(sessionRetrieved.getPaymentIntent());
                     payment.setStatus(PaymentStatus.PAID);
-                    payment.getBooking().setPaid(true);
+//                    payment.getBooking().setPaid(true);
+                    bookingClient.markPaid(booking.id());
 
                     BookingResponse response = BookingResponse.from(booking);
-                    String message = "Payment " + payment.getId() + " for booking " + booking.getId() + " completed";
+                    String message = "Payment " + payment.getId() + " for booking " + booking.id() + " completed";
                     log.info(message);
                     auditClient.log(booking.renterId(), "PAYMENT_COMPLETED", "Payment", payment.getId(), message);
 
                     notificationClient.sendEvent(booking.renterId(), "PAYMENT_RECEIVED", response);
-                    notificationClient.sendEvent(booking.getCar().getOwner().getId(), "BOOKING_PAID", response);
+                    notificationClient.sendEvent(booking.ownerId(), "BOOKING_PAID", response);
 
                 }else if (event.getType().equals("checkout.session.expired")){
                     payment.setStatus(PaymentStatus.FAILED);
-                    String message = "Payment " + payment.getId() + " for booking " + booking.getId() + " expired";
+                    String message = "Payment " + payment.getId() + " for booking " + booking.id() + " expired";
                     log.info(message);
                     auditClient.log(booking.renterId(), "PAYMENT_FAILED", "Payment", payment.getId(), message);
                     notificationClient.sendEvent(booking.renterId(), "PAYMENT_FAILED", BookingResponse.from(booking));
@@ -218,25 +219,26 @@ public class StripeService {
      * @throws InformationNotFoundException if the booking has no paid payment
      * @throws RuntimeException             if Stripe rejects the refund
      */
-    public void refund(Booking booking){
-        Payment payment = paymentRepository.findByBookingIdAndStatus(booking.getId(), PaymentStatus.PAID)
+    public void refund(Long bookingId , String authHeader){
+        BookingDTO booking = bookingClient.getBooking(bookingId , authHeader);
+        Payment payment = paymentRepository.findByBookingIdAndStatus(booking.id(), PaymentStatus.PAID)
                 .orElseThrow(() -> new InformationNotFoundException("No paid payment for this booking"));
         RefundCreateParams params = RefundCreateParams.builder()
                 .setPaymentIntent(payment.getPaymentIntent())
                 .build();
         RequestOptions options = RequestOptions.builder()
-                .setIdempotencyKey("refund-booking-" + booking.getId())
+                .setIdempotencyKey("refund-booking-" + booking.id())
                 .build();
         try {
             stripeClient.v1().refunds().create(params, options);
             booking.setPaid(false);
             payment.setStatus(PaymentStatus.REFUNDED);
-            String message = "Payment " + payment.getId() + " for booking " + booking.getId() + " refunded";
+            String message = "Payment " + payment.getId() + " for booking " + booking.id() + " refunded";
             log.info(message);
-            auditClient.log(booking.getRenter().getId(), "PAYMENT_REFUNDED", "Payment", payment.getId(), message);
+            auditClient.log(booking.renterId(), "PAYMENT_REFUNDED", "Payment", payment.getId(), message);
 
         } catch (StripeException e) {
-            log.error("Refund for booking {} failed", booking.getId(), e);
+            log.error("Refund for booking {} failed", booking.id(), e);
             throw new RuntimeException(e);
         }
     }

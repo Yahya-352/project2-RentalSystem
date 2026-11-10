@@ -16,10 +16,10 @@ public class Payment {
     private Long id;
 
     @Column
-    private String renterId;
+    private Long renterId;
 
     @Column
-    private String ownerId;
+    private Long ownerId;
 
     @Column
     private Long bookingId;

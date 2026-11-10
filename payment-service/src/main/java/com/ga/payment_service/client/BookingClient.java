@@ -4,11 +4,14 @@ import com.ga.common.exceptions.BadRequestException;
 import com.ga.common.exceptions.InformationNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -33,12 +36,24 @@ public class BookingClient {
                     .body(BookingDTO.class);
         }
         catch (HttpClientErrorException.NotFound e) {
-            throw new InformationNotFoundException("Car Not Found");
+            throw new InformationNotFoundException("Booking Not Found");
         }
         catch (RestClientException ex){
-            log.error("car-service unavailable: {}", ex.getMessage());
+            log.error("booking-service unavailable: {}", ex.getMessage());
             throw new BadRequestException("Car service is unavailable, try again later");
         }
+    }
+
+    public void markPaid(Long bookingId){
+        restClient.patch().uri("/{id}/paid" , bookingId)
+                .header("X-Internal-Key", apiKey)
+                .retrieve().toBodilessEntity();
+    }
+
+    public void markRefunded(Long bookingId){
+        restClient.patch().uri("/{id}/refund" , bookingId)
+                .header("X-Internal-Key", apiKey)
+                .retrieve().toBodilessEntity();
     }
 
 }

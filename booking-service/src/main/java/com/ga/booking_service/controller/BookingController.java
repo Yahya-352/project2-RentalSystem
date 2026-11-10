@@ -97,4 +97,14 @@ public class BookingController {
     public BookingResponse getBookingById(@PathVariable Long id){
         return bookingService.getBookingById(id);
     }
+
+    @PatchMapping("/{id}/paid")
+    public void markPaid(@PathVariable Long id){
+
+    }
+
+    @PatchMapping("/{id}/refund")
+    public void markRefund(@PathVariable Long id){
+
+    }
 }
