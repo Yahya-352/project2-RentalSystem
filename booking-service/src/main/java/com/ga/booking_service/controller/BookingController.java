@@ -100,11 +100,11 @@ public class BookingController {
 
     @PatchMapping("/{id}/paid")
     public void markPaid(@PathVariable Long id){
-
+        bookingService.markPaid(id);
     }
 
     @PatchMapping("/{id}/refund")
     public void markRefund(@PathVariable Long id){
-
+        bookingService.markRefund(id);
     }
 }
