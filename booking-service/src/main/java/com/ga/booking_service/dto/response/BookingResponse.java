@@ -11,6 +11,7 @@ public record BookingResponse(
         Long id,
         Long carId,
         Long renterId,
+        Long ownerId,
         LocalDate startDate,
         LocalDate endDate,
         BigDecimal totalPrice,
