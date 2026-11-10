@@ -1,20 +1,14 @@
 package com.ga.payment_service.service;
 
-import com.ga.RentalSystem.dto.response.BookingResponse;
-import com.ga.RentalSystem.dto.response.PaymentResponse;
-import com.ga.RentalSystem.enums.BookingStatus;
-import com.ga.RentalSystem.enums.PaymentStatus;
-import com.ga.RentalSystem.exceptions.BadRequestException;
-import com.ga.RentalSystem.exceptions.ConflictException;
-import com.ga.RentalSystem.exceptions.ForbiddenException;
-import com.ga.RentalSystem.exceptions.InformationNotFoundException;
-import com.ga.RentalSystem.model.Booking;
-import com.ga.RentalSystem.model.Payment;
-import com.ga.RentalSystem.model.User;
-import com.ga.RentalSystem.repository.BookingRepository;
-import com.ga.RentalSystem.repository.UserRepository;
+import com.ga.common.exceptions.BadRequestException;
+import com.ga.common.exceptions.ConflictException;
+import com.ga.common.exceptions.ForbiddenException;
+import com.ga.common.exceptions.InformationNotFoundException;
 import com.ga.payment_service.client.AuditClient;
 import com.ga.payment_service.client.NotificationClient;
+import com.ga.payment_service.dto.response.PaymentResponse;
+import com.ga.payment_service.enums.PaymentStatus;
+import com.ga.payment_service.model.Payment;
 import com.ga.payment_service.repository.PaymentRepository;
 import com.stripe.StripeClient;
 import com.stripe.exception.StripeException;
@@ -48,23 +42,17 @@ import java.math.RoundingMode;
 public class StripeService {
     private final StripeClient stripeClient;
     private final PaymentRepository paymentRepository;
-    private final BookingRepository bookingRepository;
-    private final UserRepository userRepository;
     private final NotificationClient notificationClient;
     private final AuditClient auditClient;
     private final String frontendUrl;
 
     public StripeService(StripeClient stripeClient,
                          PaymentRepository paymentRepository,
-                         BookingRepository bookingRepository,
-                         UserRepository userRepository,
                          NotificationClient notificationClient,
                          AuditClient auditClient,
                          @Value("${app.frontend.url}") String frontendUrl) {
         this.stripeClient = stripeClient;
         this.paymentRepository = paymentRepository;
-        this.bookingRepository = bookingRepository;
-        this.userRepository = userRepository;
         this.notificationClient = notificationClient;
         this.auditClient = auditClient;
         this.frontendUrl = frontendUrl;
@@ -200,7 +188,7 @@ public class StripeService {
                     BookingResponse response = BookingResponse.from(booking);
                     String message = "Payment " + payment.getId() + " for booking " + booking.getId() + " completed";
                     log.info(message);
-                    auditClient_service.log(booking.getRenter().getId(), "PAYMENT_COMPLETED", "Payment", payment.getId(), message);
+                    auditClient.log(booking.getRenter().getId(), "PAYMENT_COMPLETED", "Payment", payment.getId(), message);
 
                     notificationClient.sendEvent(booking.getRenter().getId(), "PAYMENT_RECEIVED", response);
                     notificationClient.sendEvent(booking.getCar().getOwner().getId(), "BOOKING_PAID", response);
