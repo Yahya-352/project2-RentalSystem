@@ -159,7 +159,7 @@ public class StripeService {
      * @param event the event, already checked against the webhook signing secret
      * @throws InformationNotFoundException if the event does not contain a checkout session
      */
-    public void capturePayment(Event event , String authHeader){
+    public void capturePayment(Event event){
         log.info("capture payment request");
         String type = event.getType();
 
@@ -175,10 +175,10 @@ public class StripeService {
             throw new InformationNotFoundException("Could not read Session from event");
         }
         Payment payment = paymentRepository.findBySessionId(sessionRetrieved.getId());
-
+        Long bookingId = payment.getBookingId();
 
         if(payment!=null){
-            BookingDTO booking = bookingClient.getBooking(bookingId , authHeader);
+            BookingDTO booking = bookingClient.getBooking(bookingId, authHeader);
             if(payment.getStatus().equals(PaymentStatus.PENDING)){
                 if(event.getType().equals("checkout.session.completed")
                         && sessionRetrieved.getPaymentStatus().equals("paid")){
@@ -215,7 +215,7 @@ public class StripeService {
      * the idempotency key {@code refund-booking-{id}}, so if it is sent twice (for example a retry
      * after an error), Stripe refunds only once.
      *
-     * @param booking the booking being cancelled
+     * @param bookingId the booking being cancelled
      * @throws InformationNotFoundException if the booking has no paid payment
      * @throws RuntimeException             if Stripe rejects the refund
      */
@@ -231,7 +231,7 @@ public class StripeService {
                 .build();
         try {
             stripeClient.v1().refunds().create(params, options);
-            booking.setPaid(false);
+            bookingClient.markRefunded(booking.id());
             payment.setStatus(PaymentStatus.REFUNDED);
             String message = "Payment " + payment.getId() + " for booking " + booking.id() + " refunded";
             log.info(message);
