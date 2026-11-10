@@ -94,7 +94,7 @@ public class BookingController {
     }
 
     @GetMapping("/{id}")
-    public BookingResponse getBookingById(Long id){
+    public BookingResponse getBookingById(@PathVariable Long id){
         return bookingService.getBookingById(id);
     }
 }

@@ -5,6 +5,8 @@ import com.ga.common.exceptions.ConflictException;
 import com.ga.common.exceptions.ForbiddenException;
 import com.ga.common.exceptions.InformationNotFoundException;
 import com.ga.payment_service.client.AuditClient;
+import com.ga.payment_service.client.BookingClient;
+import com.ga.payment_service.client.BookingDTO;
 import com.ga.payment_service.client.NotificationClient;
 import com.ga.payment_service.dto.response.PaymentResponse;
 import com.ga.payment_service.enums.PaymentStatus;
@@ -44,17 +46,19 @@ public class StripeService {
     private final PaymentRepository paymentRepository;
     private final NotificationClient notificationClient;
     private final AuditClient auditClient;
+    private final BookingClient bookingClient;
     private final String frontendUrl;
 
     public StripeService(StripeClient stripeClient,
                          PaymentRepository paymentRepository,
                          NotificationClient notificationClient,
-                         AuditClient auditClient,
+                         AuditClient auditClient, BookingClient bookingClient,
                          @Value("${app.frontend.url}") String frontendUrl) {
         this.stripeClient = stripeClient;
         this.paymentRepository = paymentRepository;
         this.notificationClient = notificationClient;
         this.auditClient = auditClient;
+        this.bookingClient = bookingClient;
         this.frontendUrl = frontendUrl;
     }
 
@@ -72,21 +76,19 @@ public class StripeService {
      * @throws ConflictException            if the booking already has a pending or paid payment
      */
     public PaymentResponse checkout(Long bookingId ,
-                                    Authentication authentication) {
-        User currentUser = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new InformationNotFoundException("User not found"));
+                                    Authentication authentication , String authHeader) {
+        Long userId = (Long) authentication.getPrincipal();
 
-        Booking booking = bookingRepository.findByIdForUpdate(bookingId)
-                .orElseThrow(() -> new InformationNotFoundException("Booking not found"));
+        BookingDTO booking = bookingClient.getBooking(bookingId , authHeader);
 
-        log.info("Checkout started for booking {} by user {}", bookingId, currentUser.getId());
+        log.info("Checkout started for booking {} by user {}", bookingId, userId);
 
-        if (!booking.getRenter().getId().equals(currentUser.getId())) {
+        if (!booking.renterId().equals(userId)) {
             throw new ForbiddenException("You are not allowed to perform this action");
         }
 
-        if (!booking.getStatus().equals(BookingStatus.APPROVED)) {
-            log.warn("Checkout for booking {} rejected: status is {}", bookingId, booking.getStatus());
+        if (!booking.status().equals("APPROVED")) {
+            log.warn("Checkout for booking {} rejected: status is {}", bookingId, booking.status());
             throw new BadRequestException("Only approved Bookings can be paid");
         }
 
@@ -100,10 +102,10 @@ public class StripeService {
         }
         SessionCreateParams.LineItem.PriceData.ProductData productData =
                 SessionCreateParams.LineItem.PriceData.ProductData.builder().setName(
-                        "Booking " + booking.getId().toString() + " - " + booking.getCar().getModel()
+                        "Booking " + booking.id()
                 ).build();
 
-        BigDecimal amount = booking.getTotalPrice().setScale(2, RoundingMode.HALF_UP);
+        BigDecimal amount = booking.totalPrice().setScale(2, RoundingMode.HALF_UP);
 
         SessionCreateParams.LineItem.PriceData priceData =
                 SessionCreateParams.LineItem.PriceData.builder().setCurrency("usd")
@@ -116,7 +118,7 @@ public class StripeService {
         SessionCreateParams params = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
                 .setSuccessUrl(frontendUrl + "/payment/success?session_id={CHECKOUT_SESSION_ID}")
-                .setCancelUrl(frontendUrl + "/payment/cancel?bookingId=" + booking.getId())
+                .setCancelUrl(frontendUrl + "/payment/cancel?bookingId=" + booking.id())
                 .addLineItem(lineItem).build();
 
         Session session;
@@ -177,7 +179,7 @@ public class StripeService {
 
 
         if(payment!=null){
-            Booking booking = payment.getBooking();
+            BookingDTO booking = bookingClient.getBooking(bookingId);
             if(payment.getStatus().equals(PaymentStatus.PENDING)){
                 if(event.getType().equals("checkout.session.completed")
                         && sessionRetrieved.getPaymentStatus().equals("paid")){

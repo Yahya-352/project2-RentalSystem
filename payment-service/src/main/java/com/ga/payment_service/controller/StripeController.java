@@ -34,8 +34,9 @@ public class StripeController {
                     + "409 if the booking already has a pending or completed payment.")
     @PostMapping("/{bookingId}")
     public PaymentResponse checkout(@PathVariable Long bookingId ,
-                                    Authentication authentication) {
-        return stripeService.checkout(bookingId ,authentication);
+                                    Authentication authentication ,
+                                    @RequestHeader("Authorization") String authHeader) {
+        return stripeService.checkout(bookingId ,authentication , authHeader);
     };
 
     @Operation(summary = "Stripe webhook (called by Stripe, not by clients)",

@@ -1,20 +1,44 @@
 package com.ga.payment_service.client;
 
+import com.ga.common.exceptions.BadRequestException;
+import com.ga.common.exceptions.InformationNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
+@Slf4j
+@Component
 public class BookingClient {
-    RestClient restClient;
 
-    public BookingClient(@Value("${booking-service.url}") String baseUrl) {
+    private final RestClient restClient;
+    private final String apiKey;
+
+
+    public BookingClient(@Value("${booking-service.url}") String baseUrl,
+                         @Value("${internal.api-key}") String apiKey) {
         restClient = RestClient.create(baseUrl);
+        this.apiKey = apiKey;
     }
 
-    public BookingDTO getBooking(Long bookingId){
-        return restClient.get()
-                .uri("/bookings/{id}")
-                .retrieve()
-                .body(BookingDTO.class);
+    public BookingDTO getBooking(Long bookingId ,String authHeader){
+        try {
+            return restClient.get()
+                    .uri("/bookings/{id}" , bookingId)
+                    .header("Authorization",authHeader)
+                    .retrieve()
+                    .body(BookingDTO.class);
+        }
+        catch (HttpClientErrorException.NotFound e) {
+            throw new InformationNotFoundException("Car Not Found");
+        }
+        catch (RestClientException ex){
+            log.error("car-service unavailable: {}", ex.getMessage());
+            throw new BadRequestException("Car service is unavailable, try again later");
+        }
     }
 
 }
