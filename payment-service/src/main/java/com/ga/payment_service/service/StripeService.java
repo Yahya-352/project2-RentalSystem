@@ -12,8 +12,9 @@ import com.ga.RentalSystem.model.Booking;
 import com.ga.RentalSystem.model.Payment;
 import com.ga.RentalSystem.model.User;
 import com.ga.RentalSystem.repository.BookingRepository;
-import com.ga.RentalSystem.repository.PaymentRepository;
 import com.ga.RentalSystem.repository.UserRepository;
+import com.ga.payment_service.client.AuditClient;
+import com.ga.payment_service.repository.PaymentRepository;
 import com.stripe.StripeClient;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
@@ -22,6 +23,7 @@ import com.stripe.net.RequestOptions;
 import com.stripe.param.RefundCreateParams;
 import com.stripe.param.checkout.SessionCreateParams;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -48,12 +50,12 @@ public class StripeService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
-    private final AuditLogService auditLogService;
+    private final AuditClient auditClient;
     private final String frontendUrl;
 
     public StripeService(StripeClient stripeClient,
                          PaymentRepository paymentRepository,
-                         BookingRepository bookingRepository, UserRepository userRepository, NotificationService notificationService, AuditLogService auditLogService,
+                         BookingRepository bookingRepository, UserRepository userRepository, NotificationService notificationService, auditClient auditClient, AuditClient auditClient,
                          @Value("${app.frontend.url}") String frontendUrl) {
         this.stripeClient = stripeClient;
         this.paymentRepository = paymentRepository;
@@ -61,7 +63,8 @@ public class StripeService {
         this.bookingRepository = bookingRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
-        this.auditLogService = auditLogService;
+        this.auditClient = auditClient;
+        this.auditClient = auditClient;
         this.frontendUrl = frontendUrl;
     }
 
@@ -195,7 +198,7 @@ public class StripeService {
                     BookingResponse response = BookingResponse.from(booking);
                     String message = "Payment " + payment.getId() + " for booking " + booking.getId() + " completed";
                     log.info(message);
-                    auditLogService.log(booking.getRenter().getId(), "PAYMENT_COMPLETED", "Payment", payment.getId(), message);
+                    auditClient_service.log(booking.getRenter().getId(), "PAYMENT_COMPLETED", "Payment", payment.getId(), message);
 
                     notificationService.sendEvent(booking.getRenter().getId(), "PAYMENT_RECEIVED", response);
                     notificationService.sendEvent(booking.getCar().getOwner().getId(), "BOOKING_PAID", response);
@@ -204,7 +207,7 @@ public class StripeService {
                     payment.setStatus(PaymentStatus.FAILED);
                     String message = "Payment " + payment.getId() + " for booking " + booking.getId() + " expired";
                     log.info(message);
-                    auditLogService.log(booking.getRenter().getId(), "PAYMENT_FAILED", "Payment", payment.getId(), message);
+                    auditClient.log(booking.getRenter().getId(), "PAYMENT_FAILED", "Payment", payment.getId(), message);
                     notificationService.sendEvent(booking.getRenter().getId(), "PAYMENT_FAILED", BookingResponse.from(booking));
                 }
                 paymentRepository.save(payment);
@@ -239,7 +242,7 @@ public class StripeService {
             payment.setStatus(PaymentStatus.REFUNDED);
             String message = "Payment " + payment.getId() + " for booking " + booking.getId() + " refunded";
             log.info(message);
-            auditLogService.log(booking.getRenter().getId(), "PAYMENT_REFUNDED", "Payment", payment.getId(), message);
+            auditClient.log(booking.getRenter().getId(), "PAYMENT_REFUNDED", "Payment", payment.getId(), message);
 
         } catch (StripeException e) {
             log.error("Refund for booking {} failed", booking.getId(), e);
