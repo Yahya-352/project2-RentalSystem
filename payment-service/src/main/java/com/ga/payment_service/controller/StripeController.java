@@ -1,8 +1,9 @@
 package com.ga.payment_service.controller;
 
-import com.ga.RentalSystem.dto.response.PaymentResponse;
-import com.ga.RentalSystem.exceptions.BadRequestException;
-import com.ga.RentalSystem.service.StripeService;
+
+import com.ga.common.exceptions.BadRequestException;
+import com.ga.payment_service.dto.response.PaymentResponse;
+import com.ga.payment_service.service.StripeService;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
 import com.stripe.net.Webhook;
