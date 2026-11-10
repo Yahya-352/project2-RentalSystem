@@ -99,12 +99,12 @@ public class BookingController {
     }
 
     @PatchMapping("/{id}/paid")
-    public void markPaid(@PathVariable Long id){
+    public void markPaid(@PathVariable Long id , @RequestHeader(value = "X-Internal-Key", required = false)){
         bookingService.markPaid(id);
     }
 
     @PatchMapping("/{id}/refund")
-    public void markRefund(@PathVariable Long id){
+    public void markRefund(@PathVariable Long id , @RequestHeader(value = "X-Internal-Key", required = false)){
         bookingService.markRefund(id);
     }
 }

@@ -30,6 +30,7 @@ public record BookingResponse(
         return new BookingResponse(booking.getId(),
                 booking.getCarId(),
                 booking.getRenterId(),
+                booking.getOwnerId(),
                 booking.getStartDate(),
                 booking.getEndDate(),
                 booking.getTotalPrice(),

@@ -255,7 +255,6 @@ public class BookingService {
         log.info(message);
         auditClient.log(ownerId, "BOOKING_REJECTED", "Booking", booking.getId(), message);
 
-
         notificationClient.sendEvent(booking.getRenterId(), "BOOKING_REJECTED", response);
         return response;
     }
