@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -24,7 +25,11 @@ import java.util.List;
 @RequestMapping("/bookings")
 @RequiredArgsConstructor
 public class BookingController {
+
     private final BookingService bookingService;
+
+    @Value("${INTERNAL_API_KEY}")
+    private final String internalApiKey;
 
     @Operation(summary = "Create a booking for a car (customer only)")
     @PostMapping
@@ -99,12 +104,14 @@ public class BookingController {
     }
 
     @PatchMapping("/{id}/paid")
-    public void markPaid(@PathVariable Long id , @RequestHeader(value = "X-Internal-Key", required = false)){
+    public void markPaid(@PathVariable Long id ,
+                         @RequestHeader(value = "X-Internal-Key", required = false) String apiKey){
         bookingService.markPaid(id);
     }
 
     @PatchMapping("/{id}/refund")
-    public void markRefund(@PathVariable Long id , @RequestHeader(value = "X-Internal-Key", required = false)){
+    public void markRefund(@PathVariable Long id ,
+                           @RequestHeader(value = "X-Internal-Key", required = false) String apiKey){
         bookingService.markRefund(id);
     }
 }
