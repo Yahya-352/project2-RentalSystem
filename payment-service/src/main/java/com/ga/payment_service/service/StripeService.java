@@ -14,6 +14,7 @@ import com.ga.RentalSystem.model.User;
 import com.ga.RentalSystem.repository.BookingRepository;
 import com.ga.RentalSystem.repository.UserRepository;
 import com.ga.payment_service.client.AuditClient;
+import com.ga.payment_service.client.NotificationClient;
 import com.ga.payment_service.repository.PaymentRepository;
 import com.stripe.StripeClient;
 import com.stripe.exception.StripeException;
@@ -49,21 +50,22 @@ public class StripeService {
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
-    private final NotificationService notificationService;
+    private final NotificationClient notificationClient;
     private final AuditClient auditClient;
     private final String frontendUrl;
 
     public StripeService(StripeClient stripeClient,
                          PaymentRepository paymentRepository,
-                         BookingRepository bookingRepository, UserRepository userRepository, NotificationService notificationService, auditClient auditClient, AuditClient auditClient,
+                         BookingRepository bookingRepository,
+                         UserRepository userRepository,
+                         NotificationClient notificationClient,
+                         AuditClient auditClient,
                          @Value("${app.frontend.url}") String frontendUrl) {
         this.stripeClient = stripeClient;
         this.paymentRepository = paymentRepository;
-
         this.bookingRepository = bookingRepository;
         this.userRepository = userRepository;
-        this.notificationService = notificationService;
-        this.auditClient = auditClient;
+        this.notificationClient = notificationClient;
         this.auditClient = auditClient;
         this.frontendUrl = frontendUrl;
     }
@@ -200,15 +202,15 @@ public class StripeService {
                     log.info(message);
                     auditClient_service.log(booking.getRenter().getId(), "PAYMENT_COMPLETED", "Payment", payment.getId(), message);
 
-                    notificationService.sendEvent(booking.getRenter().getId(), "PAYMENT_RECEIVED", response);
-                    notificationService.sendEvent(booking.getCar().getOwner().getId(), "BOOKING_PAID", response);
+                    notificationClient.sendEvent(booking.getRenter().getId(), "PAYMENT_RECEIVED", response);
+                    notificationClient.sendEvent(booking.getCar().getOwner().getId(), "BOOKING_PAID", response);
 
                 }else if (event.getType().equals("checkout.session.expired")){
                     payment.setStatus(PaymentStatus.FAILED);
                     String message = "Payment " + payment.getId() + " for booking " + booking.getId() + " expired";
                     log.info(message);
                     auditClient.log(booking.getRenter().getId(), "PAYMENT_FAILED", "Payment", payment.getId(), message);
-                    notificationService.sendEvent(booking.getRenter().getId(), "PAYMENT_FAILED", BookingResponse.from(booking));
+                    notificationClient.sendEvent(booking.getRenter().getId(), "PAYMENT_FAILED", BookingResponse.from(booking));
                 }
                 paymentRepository.save(payment);
             }
