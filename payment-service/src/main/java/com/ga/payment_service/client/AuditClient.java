@@ -26,12 +26,7 @@ public class AuditClient {
             restClient.post().uri("/audit-logs")
                     .header("X-Internal-Key", apikey)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of(
-                            "userId", userId,
-                            "action", action,
-                            "entityType", entityType,
-                            "entityId", entityId,
-                            "details", details))
+                    .body(new AuditLogRequest(userId, action, entityType, entityId, details))
                     .retrieve()
                     .toBodilessEntity();
         }catch (Exception ex){
