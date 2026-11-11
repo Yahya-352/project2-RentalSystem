@@ -17,7 +17,9 @@ public record BookingResponse(
         BigDecimal totalPrice,
         BookingStatus status,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        boolean paid ,
+        boolean refunded
 ) {
     /**
      * Builds the response from a booking entity. It lives here, not in a service, so that both
@@ -36,6 +38,9 @@ public record BookingResponse(
                 booking.getTotalPrice(),
                 booking.getStatus(),
                 booking.getCreatedAt(),
-                booking.getUpdatedAt());
+                booking.getUpdatedAt(),
+                booking.isPaid(),
+                booking.isRefunded());
+
     }
 }
