@@ -36,7 +36,7 @@ public class NotificationController {
 
     @Operation(summary = "Internal: push a notification to a user (service-to-service only)")
     @PostMapping
-    public ResponseEntity<Void> send(@RequestHeader("X-Internal-Key") String key,
+    public ResponseEntity<Void> send(@RequestHeader(value = "X-Internal-Key" , required = false) String key,
                                      @RequestBody NotificationRequest request) {
         if (!internalApiKey.equals(key)) {
             throw new ForbiddenException("Invalid internal key");

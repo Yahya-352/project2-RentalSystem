@@ -18,7 +18,7 @@ public class AuditLogController {
     private String internalApiKey;
 
     @PostMapping
-    public ResponseEntity<Void> createAuditLog(@RequestHeader("X-Internal-Key") String key,
+    public ResponseEntity<Void> createAuditLog(@RequestHeader(value = "X-Internal-Key" ,required = false) String key ,
                                                @RequestBody AuditLogRequest request) {
 
         if (!internalApiKey.equals(key)) {
