@@ -32,5 +32,8 @@ public class JWTUtils {
     public String getRoleFromJwtToken(String token){
         return parseClaims(token).get("role",String.class);
     }
+    public String getUsernameFromJwtToken(String token){
+        return parseClaims(token).get("username",String.class);
+    }
 
 }

@@ -24,6 +24,7 @@ public class JWTUtils {
         return Jwts.builder().setSubject(myUserDetails.getUsername())
                 .claim("userId" , myUserDetails.getUser().getId())
                 .claim("role" , myUserDetails.getUser().getRoleEnum().name())
+                .claim("username" , myUserDetails.getUser().getUserName())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(new Date().getTime() + jwtExpirationMs))
                 .signWith(SignatureAlgorithm.HS256 , jwtSecret).compact();

@@ -69,6 +69,7 @@ public class CarService {
     public CarResponse createCar(CarRequest carRequest ,
                                  Authentication authentication){
         Long ownerId = (Long) authentication.getPrincipal();
+        String ownerUsername = (String) authentication.getDetails();
 
         Car car = new Car();
         Make make = makeRepository.findById(carRequest.makeId())
@@ -87,6 +88,7 @@ public class CarService {
         car.setPricePerDay(carRequest.pricePerDay());
         car.setOwnerId(ownerId);
         car.setAvailable(true);
+        car.setOwnerUsername(ownerUsername);
 
         try {
             car.setTransmission(TransmissionType.valueOf(carRequest.transmission().toUpperCase()));
@@ -334,7 +336,8 @@ public class CarService {
                 car.getOwnerId(),
                 car.getCreatedAt(),
                 car.getUpdatedAt(),
-                imageRepository.findByCarId(car.getId()).stream().map(image -> image.getId()).toList()
+                imageRepository.findByCarId(car.getId()).stream().map(image -> image.getId()).toList(),
+                car.getOwnerUsername()
         );
     }
 

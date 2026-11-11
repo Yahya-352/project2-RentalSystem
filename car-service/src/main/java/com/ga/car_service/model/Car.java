@@ -38,6 +38,9 @@ public class Car {
     @Column(name = "owner_id", nullable = false)
     private Long ownerId;
 
+    @Column
+    private String ownerUsername;
+
     private int year;
     private String licensePlate;
 
@@ -58,6 +61,8 @@ public class Car {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+
 
 
 }

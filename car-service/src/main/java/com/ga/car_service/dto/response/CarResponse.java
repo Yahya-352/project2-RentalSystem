@@ -21,5 +21,6 @@ public record CarResponse(
         Long ownerId,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
-        List<Long> imageIds
+        List<Long> imageIds,
+        String ownerUsername
 ) {}
