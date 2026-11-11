@@ -6,6 +6,8 @@ public record CarSummary(
         Long id,
         Long ownerId,
         BigDecimal pricePerDay,
-        boolean available
+        boolean available,
+        String make ,
+        String model
 ) {
 }

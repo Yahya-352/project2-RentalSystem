@@ -98,6 +98,8 @@ public class BookingService {
         booking.setEndDate(request.endDate());
         booking.setTotalPrice(totalPrice);
         booking.setStatus(BookingStatus.PENDING);
+        booking.setMake(carSummary.make());
+        booking.setModel(carSummary.model());
 
         Booking saved = bookingRepository.save(booking);
 

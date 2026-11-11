@@ -52,4 +52,10 @@ public class Booking {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    @Column
+    private String make;
+
+    @Column
+    private String model;
 }

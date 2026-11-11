@@ -19,7 +19,9 @@ public record BookingResponse(
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         boolean paid ,
-        boolean refunded
+        boolean refunded,
+        String make ,
+        String model
 ) {
     /**
      * Builds the response from a booking entity. It lives here, not in a service, so that both
@@ -40,7 +42,9 @@ public record BookingResponse(
                 booking.getCreatedAt(),
                 booking.getUpdatedAt(),
                 booking.isPaid(),
-                booking.isRefunded());
+                booking.isRefunded(),
+                booking.getMake(),
+                booking.getModel());
 
     }
 }
