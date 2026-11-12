@@ -6,10 +6,13 @@ import { homeFor, useAuth } from '../../auth/AuthContext';
 import { Field } from '../../components/ui';
 import { AuthShell } from './AuthShell';
 
+// Demo logins come from frontend/.env (gitignored) so they match the accounts the user-service
+// seeder created; the fallbacks are only placeholders.
+const env = import.meta.env;
 const DEMO_ACCOUNTS = [
-  { label: 'Customer', email: 'customer@rental.com', password: 'Test1234!' },
-  { label: 'Agency', email: 'agency@rental.com', password: 'Test1234!' },
-  { label: 'Admin', email: 'admin@rental.com', password: 'Admin123!' },
+  { label: 'Customer', email: env.VITE_DEMO_CUSTOMER_EMAIL ?? 'customer@rental.com', password: env.VITE_DEMO_SEED_PASSWORD ?? '' },
+  { label: 'Agency', email: env.VITE_DEMO_AGENCY_EMAIL ?? 'agency@rental.com', password: env.VITE_DEMO_SEED_PASSWORD ?? '' },
+  { label: 'Admin', email: env.VITE_DEMO_ADMIN_EMAIL ?? 'admin@rental.com', password: env.VITE_DEMO_ADMIN_PASSWORD ?? '' },
 ];
 
 export function LoginPage() {
