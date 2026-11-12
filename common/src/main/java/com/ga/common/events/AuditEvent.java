@@ -1,4 +1,4 @@
 package com.ga.common.events;
 
-public class AuditEvent {
+public record AuditEvent(Long userId, String eventName, Object data) {
 }
