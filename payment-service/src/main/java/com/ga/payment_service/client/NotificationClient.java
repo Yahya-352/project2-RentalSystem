@@ -1,8 +1,12 @@
 package com.ga.payment_service.client;
 
+import com.ga.common.events.NotificationEvent;
+import com.ga.common.events.Topics;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -10,29 +14,21 @@ import java.util.Map;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class NotificationClient {
 
-    private final RestClient restClient;
-    private final String apikey;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public NotificationClient(@Value("${notification-service.url}") String baseUrl,
-                              @Value("${internal.api-key}") String apiKey) {
-        restClient = RestClient.create(baseUrl);
-        this.apikey = apiKey;
-    }
-
-    public void sendEvent(Long userId, String eventName , Object data){
-        try{
-            restClient.post().uri("/notifications")
-                    .header("X-Internal-Key", apikey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of(
-                            "userId", userId,
-                            "eventName", eventName,
-                            "data", data))
-                    .retrieve()
-                    .toBodilessEntity();
-        }catch (Exception ex){
+    public void sendEvent(Long userId, String eventName, Object data) {
+        try {
+            kafkaTemplate.send(Topics.NOTIFICATION, String.valueOf(userId),
+                            new NotificationEvent(userId, eventName, data))
+                    .whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            log.error("Failed to send notification {}", eventName, ex);
+                        }
+                    });
+        } catch (Exception ex) {
             log.error(ex.getMessage(), ex);
         }
     }
