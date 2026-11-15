@@ -8,11 +8,12 @@ services:
     ports:
       - "5433:5432"
     volumes:
-        - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
-        test: [ "CMD-SHELL", "pg_isready -U postgres -d rental_db" ]
-        interval: 5s
-        retries: 10
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d rental_db" ]
+      interval: 5s
+      retries: 10
+
   kafka:
     image: apache/kafka:4.1.0
     environment:
@@ -34,3 +35,78 @@ services:
       test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:19092 > /dev/null 2>&1" ]
       interval: 10s
       retries: 10
+
+  user-service:
+    build:
+      context: .
+      args: { SERVICE: user-service, PORT: 8081 }
+    ports: [ "8081:8081" ]
+    environment: &common-env
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/rental_db
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+    volumes:
+      - ./user-service/.env:/app/.env:ro
+      - ./user-service/uploads:/app/uploads
+    depends_on: &deps
+      postgres: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+
+  car-service:
+    build:
+      context: .
+      args: { SERVICE: car-service, PORT: 8082 }
+    ports: [ "8082:8082" ]
+    environment: *common-env
+    volumes:
+      - ./car-service/.env:/app/.env:ro
+      - ./car-service/uploads:/app/uploads
+    depends_on: *deps
+
+  booking-service:
+    build:
+      context: .
+      args: { SERVICE: booking-service, PORT: 8083 }
+    ports: [ "8083:8083" ]
+    environment:
+      <<: *common-env
+      CARSERVICE_URL: http://car-service:8082
+      PAYMENTSERVICE_URL: http://payment-service:8084
+    volumes:
+      - ./booking-service/.env:/app/.env:ro
+    depends_on: *deps
+
+  payment-service:
+    build:
+      context: .
+      args: { SERVICE: payment-service, PORT: 8084 }
+    ports: [ "8084:8084" ]
+    environment:
+      <<: *common-env
+      CARSERVICE_URL: http://car-service:8082
+      BOOKINGSERVICE_URL: http://booking-service:8083
+    volumes:
+      - ./payment-service/.env:/app/.env:ro
+    depends_on: *deps
+
+  notification-service:
+    build:
+      context: .
+      args: { SERVICE: notification-service, PORT: 8085 }
+    ports: [ "8085:8085" ]
+    environment: *common-env
+    volumes:
+      - ./notification-service/.env:/app/.env:ro
+    depends_on: *deps
+
+  audit-service:
+    build:
+      context: .
+      args: { SERVICE: audit-service, PORT: 8086 }
+    ports: [ "8086:8086" ]
+    environment: *common-env
+    volumes:
+      - ./audit-service/.env:/app/.env:ro
+    depends_on: *deps
+
+volumes:
+  pgdata:
