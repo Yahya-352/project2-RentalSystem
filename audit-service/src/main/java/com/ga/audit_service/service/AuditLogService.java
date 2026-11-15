@@ -14,7 +14,7 @@ public class AuditLogService {
     private final AuditLogRepository auditLogRepository;
 
     public void log(Long userId, String action, String entityType,
-                    Long entityId, String details , LocalDateTime timestamp) {
+                    Long entityId, String details , LocalDateTime timestamp , String eventId) {
         AuditLog auditLog = new AuditLog();
         auditLog.setUserId(userId);
         auditLog.setAction(action);
@@ -22,6 +22,7 @@ public class AuditLogService {
         auditLog.setEntityId(entityId);
         auditLog.setDetails(details);
         auditLog.setCreatedAt(timestamp != null ? timestamp : LocalDateTime.now());
+        auditLog.setEventId(eventId);
         auditLogRepository.save(auditLog);
     }
 }

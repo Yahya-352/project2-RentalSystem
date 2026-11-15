@@ -30,4 +30,7 @@ public class AuditLog {
     private String details;
 
     private LocalDateTime createdAt;
+
+    @Column(unique = true)
+    private String eventId;
 }

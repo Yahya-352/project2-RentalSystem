@@ -12,6 +12,7 @@ import org.springframework.web.client.RestClient;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -23,7 +24,8 @@ public class AuditClient {
     public void log(Long userId, String action, String entityType, Long entityId, String details){
         try {
             kafkaTemplate.send(Topics.AUDIT ,
-                            new AuditEvent(userId, action, entityType, entityId, details , LocalDateTime.now()))
+                            new AuditEvent(userId, action, entityType, entityId, details ,
+                                    LocalDateTime.now() , UUID.randomUUID().toString()))
                     .whenComplete((res, ex) -> {
                         if (ex != null) {
                             log.error("Failed to send event {}", action ,ex);
