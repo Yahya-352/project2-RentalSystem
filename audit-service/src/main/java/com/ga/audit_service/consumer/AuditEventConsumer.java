@@ -18,7 +18,7 @@ public class AuditEventConsumer {
     public void consume(AuditEvent auditEvent) {
         auditLogService.log(auditEvent.userId() , auditEvent.action(),
                 auditEvent.entityType(), auditEvent.entityId(),
-                auditEvent.details());
+                  auditEvent.details());
     }
 
 }

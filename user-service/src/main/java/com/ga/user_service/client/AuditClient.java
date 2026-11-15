@@ -10,6 +10,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Component
@@ -22,7 +23,7 @@ public class AuditClient {
     public void log(Long userId, String action, String entityType, Long entityId, String details){
         try {
             kafkaTemplate.send(Topics.AUDIT,
-                            new AuditEvent(userId, action, entityType, entityId, details))
+                            new AuditEvent(userId, action, entityType, entityId, details , LocalDateTime.now()))
                     .whenComplete((res, ex) -> {
                         if (ex != null) {
                             log.error("Failed to send event {}", action ,ex);
