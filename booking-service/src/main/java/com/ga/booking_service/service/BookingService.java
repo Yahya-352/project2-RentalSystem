@@ -44,8 +44,7 @@ public class BookingService {
     private final BookingRepository bookingRepository;
 
 
-    private final NotificationClient notificationClient;
-    private final AuditClient auditClient;
+    private final BookingEventPublisher bookingEventPublisher;
     private final CarClient carClient;
     private final PaymentClient paymentClient;
 
@@ -104,13 +103,10 @@ public class BookingService {
         Booking saved = bookingRepository.save(booking);
 
         BookingResponse response = toResponse(saved);
-        //notification
-        notificationClient.sendEvent(carSummary.ownerId(), "BOOKING_CREATED", response);
 
-        //logging
         String message = "Booking " + booking.getId() + " created by user " + renterId;
         log.info(message);
-        auditClient.log(renterId, "BOOKING_CREATED", "Booking", saved.getId(), message);
+        bookingEventPublisher.publish("BOOKING_CREATED", renterId, response, message);
         return response;
     }
 
@@ -214,9 +210,7 @@ public class BookingService {
         String message = "Booking " + booking.getId() + " approved by Agency " +
                 ownerId;
         log.info(message);
-        auditClient.log(ownerId, "BOOKING_APPROVED", "Booking", booking.getId(), message);
-
-        notificationClient.sendEvent(booking.getRenterId(), "BOOKING_APPROVED", response);
+        bookingEventPublisher.publish("BOOKING_APPROVED", ownerId, response, message);
         return response;
     }
 
@@ -252,9 +246,7 @@ public class BookingService {
 
         String message = "Booking " + booking.getId() + " Rejected by Agency " + ownerId;
         log.info(message);
-        auditClient.log(ownerId, "BOOKING_REJECTED", "Booking", booking.getId(), message);
-
-        notificationClient.sendEvent(booking.getRenterId(), "BOOKING_REJECTED", response);
+        bookingEventPublisher.publish("BOOKING_REJECTED", ownerId, response, message);
         return response;
     }
 
@@ -305,9 +297,7 @@ public class BookingService {
         }
         log.info(message);
         BookingResponse response = toResponse(bookingRepository.save(booking));
-        auditClient.log(loggedIn, "BOOKING_CANCELLED", "Booking", booking.getId(), message);
-        Long notifyUserId = isRenter ? booking.getOwnerId() : booking.getRenterId();
-        notificationClient.sendEvent(notifyUserId, "BOOKING_CANCELLED", response);
+        bookingEventPublisher.publish("BOOKING_CANCELLED", loggedIn, response, message);
         return response;
     }
 
