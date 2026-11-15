@@ -29,6 +29,5 @@ public class AuditLog {
 
     private String details;
 
-    @CreationTimestamp
     private LocalDateTime createdAt;
 }
