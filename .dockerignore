@@ -1,0 +1,8 @@
+**/.env
+**/target
+**/uploads
+**/node_modules
+frontend
+.git
+.idea
+src
