@@ -38,3 +38,9 @@ resource "aws_ssm_parameter" "db_password" {
   type  = "SecureString"
   value = random_password.db.result
 }
+
+resource "aws_ssm_parameter" "db_url" {
+  name  = "/${var.project_name}/app/SPRING_DATASOURCE_URL"
+  type  = "String"
+  value = "jdbc:postgresql://${aws_db_instance.main.address}:5432/${var.db_name}"
+}
