@@ -34,7 +34,7 @@ resource "aws_db_instance" "main" {
 }
 
 resource "aws_ssm_parameter" "db_password" {
-name  = "/${var.project_name}/db/password"
-type  = "SecureString"
-value = random_password.db.result
+  name  = "/${var.project_name}/app/DB_PASSWORD"
+  type  = "SecureString"
+  value = random_password.db.result
 }

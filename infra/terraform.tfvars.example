@@ -1,0 +1,7 @@
+smtp_username         = "your-email@gmail.com"
+  smtp_password         = "your-app-password"
+  admin_username        = "admin@rental.com"
+  admin_password        = "change-me"
+  seed_password         = "change-me"
+  stripe_secret_key     = "sk_test_..."
+  stripe_webhook_secret = "whsec_..."

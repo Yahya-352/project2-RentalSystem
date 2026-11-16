@@ -39,3 +39,44 @@ variable "db_username" {
   type        = string
   default     = "rentride_admin"
 }
+
+variable "frontend_url" {
+  description = "Public URL of the frontend (used for Stripe redirects)"
+  type        = string
+  default     = "http://localhost:5173"
+}
+
+variable "smtp_username" {
+  type      = string
+  sensitive = true
+}
+
+variable "smtp_password" {
+  type      = string
+  sensitive = true
+}
+
+variable "admin_username" {
+  type      = string
+  sensitive = true
+}
+
+variable "admin_password" {
+  type      = string
+  sensitive = true
+}
+
+variable "seed_password" {
+  type      = string
+  sensitive = true
+}
+
+variable "stripe_secret_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "stripe_webhook_secret" {
+  type      = string
+  sensitive = true
+}
