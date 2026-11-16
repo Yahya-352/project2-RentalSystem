@@ -9,3 +9,11 @@ output "rds_endpoint" {
 output "ecr_registry" {
   value = split("/", aws_ecr_repository.service["user-service"].repository_url)[0]
 }
+
+output "frontend_url" {
+  value = "http://${aws_s3_bucket_website_configuration.frontend.website_endpoint}"
+}
+
+output "app_url" {
+  value = "https://${aws_cloudfront_distribution.main.domain_name}"
+}
