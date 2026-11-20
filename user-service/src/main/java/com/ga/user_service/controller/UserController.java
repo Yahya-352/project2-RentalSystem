@@ -7,7 +7,12 @@ import com.ga.user_service.dto.request.RegisterRequest;
 import com.ga.user_service.dto.request.ResetPasswordToken;
 import com.ga.user_service.dto.response.LoginResponse;
 import com.ga.user_service.dto.response.RegisterResponse;
+import com.ga.user_service.dto.response.UserSummaryResponse;
 import com.ga.user_service.service.UserService;
+import com.ga.common.dto.response.PageResponse;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -95,6 +100,17 @@ public class UserController {
     @PatchMapping("/{id}/activate")
     public void activateUser(@PathVariable Long id, Authentication authentication) {
         userService.activateUser(id, authentication);
+    }
+
+    @Operation(summary = "List users, filtered by role, status or a search text (admin only)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping
+    public PageResponse<UserSummaryResponse> getUsers(@RequestParam(required = false) String role,
+                                                      @RequestParam(required = false) String status,
+                                                      @RequestParam(required = false) String search,
+                                                      @PageableDefault(size = 15, sort = "id",
+                                                              direction = Sort.Direction.DESC) Pageable pageable) {
+        return userService.getUsers(role, status, search, pageable);
     }
 
 }

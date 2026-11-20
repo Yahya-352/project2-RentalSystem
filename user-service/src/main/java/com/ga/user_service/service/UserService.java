@@ -7,6 +7,10 @@ import com.ga.user_service.dto.request.RegisterRequest;
 import com.ga.user_service.dto.request.ResetPasswordToken;
 import com.ga.user_service.dto.response.LoginResponse;
 import com.ga.user_service.dto.response.RegisterResponse;
+import com.ga.user_service.dto.response.UserSummaryResponse;
+import com.ga.common.dto.response.PageResponse;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import com.ga.user_service.enums.Role;
 import com.ga.user_service.enums.UserStatus;
 import com.ga.user_service.exceptions.*;
@@ -430,6 +434,47 @@ public class UserService {
 
         log.info(message);
         auditClient.log(admin.getId(), action, "User", user.getId(), message);
+    }
+
+    /**
+     * Lists users for the admin, newest first unless another sort is given. All filters are
+     * optional and combined: role, status, and a search text matched against username and email.
+     *
+     * @param role     ADMIN, CUSTOMER or AGENCY
+     * @param status   ACTIVE, INACTIVE, UNVERIFIED or UNAPPROVED_AGENCY
+     * @param search   part of the username or email, case-insensitive
+     * @param pageable page number, size and sort
+     * @return one page of users
+     * @throws BadRequestException if role or status is not a known value
+     */
+    public PageResponse<UserSummaryResponse> getUsers(String role, String status, String search,
+                                                      Pageable pageable) {
+        Specification<User> spec = (root, query, cb) -> cb.conjunction();
+
+        if (role != null && !role.isBlank()) {
+            Role roleEnum = parseEnum(Role.class, role, "role");
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("roleEnum"), roleEnum));
+        }
+        if (status != null && !status.isBlank()) {
+            UserStatus statusEnum = parseEnum(UserStatus.class, status, "status");
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("userStatus"), statusEnum));
+        }
+        if (search != null && !search.isBlank()) {
+            String pattern = "%" + search.trim().toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("userName")), pattern),
+                    cb.like(cb.lower(root.get("email")), pattern)));
+        }
+
+        return PageResponse.from(userRepository.findAll(spec, pageable).map(UserSummaryResponse::from));
+    }
+
+    private <E extends Enum<E>> E parseEnum(Class<E> type, String value, String name) {
+        try {
+            return Enum.valueOf(type, value.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid " + name + ": " + value);
+        }
     }
 
 }

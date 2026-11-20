@@ -195,6 +195,47 @@ export interface PageResponse<T> {
   totalPages: number;
 }
 
+export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'UNVERIFIED' | 'UNAPPROVED_AGENCY';
+
+/** From GET /users (admin). */
+export interface UserSummary {
+  id: number;
+  userName: string;
+  email: string;
+  role: Role;
+  status: UserStatus;
+  verified: boolean;
+  createdAt: IsoDateTime;
+}
+
+/** From GET /audit-logs (admin). userId is null for system jobs such as the booking scheduler. */
+export interface AuditLogEntry {
+  id: number;
+  userId: number | null;
+  action: string;
+  entityType: string;
+  entityId: number | null;
+  details: string;
+  createdAt: IsoDateTime;
+}
+
+export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+
+/** From GET /pay/payments. make and model are null for payments made before they were stored. */
+export interface PaymentSummary {
+  id: number;
+  bookingId: number;
+  renterId: number;
+  ownerId: number;
+  amount: number;
+  currency: string;
+  status: PaymentStatus;
+  make: string | null;
+  model: string | null;
+  createdAt: IsoDateTime | null;
+  updatedAt: IsoDateTime | null;
+}
+
 export interface ErrorResponse {
   timestamp?: IsoDateTime;
   status: number;

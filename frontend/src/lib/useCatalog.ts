@@ -24,6 +24,11 @@ function loadCatalog(): Promise<Catalog> {
   return cached;
 }
 
+/** Drops the cached makes and categories so the next useCatalog() fetches them again (after admin edits). */
+export function resetCatalogCache() {
+  cached = null;
+}
+
 /** Makes and categories from GET /makes and GET /categories. */
 export function useCatalog() {
   return useAsync(loadCatalog, []);

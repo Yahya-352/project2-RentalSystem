@@ -21,6 +21,9 @@ const NAV: Record<Role, { to: string; label: string }[]> = {
   ADMIN: [
     { to: '/admin/bookings', label: 'All bookings' },
     { to: '/admin/users', label: 'Users' },
+    { to: '/admin/payments', label: 'Payments' },
+    { to: '/admin/audit', label: 'Audit log' },
+    { to: '/admin/catalog', label: 'Makes & categories' },
     { to: '/cars', label: 'Cars' },
   ],
 };

@@ -526,6 +526,21 @@ textarea:focus {
   background: var(--surface-2);
   color: var(--muted);
 }
+/* User and payment statuses on the admin pages */
+.badge-active {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.badge-unverified,
+.badge-unapproved_agency {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.badge-inactive,
+.badge-failed {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
 .chips {
   display: flex;
   gap: 0.4rem;

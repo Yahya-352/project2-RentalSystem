@@ -4,7 +4,10 @@ import { GuestOnly, RequireAuth } from './auth/RequireAuth';
 import { Layout } from './components/Layout';
 import { EmptyState } from './components/ui';
 import { AccountPage } from './pages/AccountPage';
+import { AdminAuditPage } from './pages/admin/AdminAuditPage';
 import { AdminBookingsPage } from './pages/admin/AdminBookingsPage';
+import { AdminCatalogPage } from './pages/admin/AdminCatalogPage';
+import { AdminPaymentsPage } from './pages/admin/AdminPaymentsPage';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { AgencyBookingsPage } from './pages/agency/AgencyBookingsPage';
 import { AgencyProfilePage } from './pages/agency/AgencyProfilePage';
@@ -58,6 +61,9 @@ export default function App() {
           <Route element={<RequireAuth roles={['ADMIN']} />}>
             <Route path="/admin/bookings" element={<AdminBookingsPage />} />
             <Route path="/admin/users" element={<AdminUsersPage />} />
+            <Route path="/admin/payments" element={<AdminPaymentsPage />} />
+            <Route path="/admin/audit" element={<AdminAuditPage />} />
+            <Route path="/admin/catalog" element={<AdminCatalogPage />} />
           </Route>
 
           <Route

@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
     bookings: env.BOOKING_SERVICE_URL || 'http://localhost:8083',
     pay: env.PAYMENT_SERVICE_URL || 'http://localhost:8084',
     notifications: env.NOTIFICATION_SERVICE_URL || 'http://localhost:8085',
+    'audit-logs': env.AUDIT_SERVICE_URL || 'http://localhost:8086',
   };
 
   const proxy: Record<string, ProxyOptions> = {};

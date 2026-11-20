@@ -11,6 +11,7 @@ locals {
     "/api/bookings*"      = 8083
     "/api/pay*"           = 8084
     "/api/notifications*" = 8085
+    "/api/audit-logs*"    = 8086
   }
   api_ports = toset([for port in values(local.api_routes) : tostring(port)])
 }

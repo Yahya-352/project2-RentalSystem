@@ -19,12 +19,18 @@ import type {
   MakeResponse,
   PageResponse,
   PaymentResponse,
+  PaymentStatus,
+  PaymentSummary,
   RegisterRequest,
   RegisterResponse,
   ResetPasswordRequest,
+  Role,
   TransmissionType,
+  AuditLogEntry,
   UserProfileRequest,
   UserProfileResponse,
+  UserStatus,
+  UserSummary,
 } from './types';
 
 /** One function per backend endpoint, grouped by controller. */
@@ -46,6 +52,13 @@ export const usersApi = {
     request<string>('/users/change-password', { method: 'POST', body }),
   activate: (id: number) => request<void>(`/users/${id}/activate`, { method: 'PATCH' }),
   deactivate: (id: number) => request<void>(`/users/${id}/deactivate`, { method: 'PATCH' }),
+  list: (params: { role?: Role | ''; status?: UserStatus | ''; search?: string; page?: number; size?: number }) =>
+    request<PageResponse<UserSummary>>('/users', { query: { ...params } }),
+};
+
+export const auditApi = {
+  list: (params: { action?: string; entityType?: string; userId?: number; page?: number; size?: number }) =>
+    request<PageResponse<AuditLogEntry>>('/audit-logs', { query: { ...params } }),
 };
 
 /** Every filter is optional; the backend combines all the ones that are sent. */
@@ -89,6 +102,11 @@ export const carsApi = {
 export const catalogApi = {
   makes: () => request<MakeResponse[]>('/makes'),
   categories: () => request<CategoryResponse[]>('/categories'),
+  createMake: (name: string) => request<MakeResponse>('/makes', { method: 'POST', body: { name } }),
+  updateMake: (id: number, name: string) => request<MakeResponse>(`/makes/${id}`, { method: 'PUT', body: { name } }),
+  createCategory: (name: string) => request<CategoryResponse>('/categories', { method: 'POST', body: { name } }),
+  updateCategory: (id: number, name: string) =>
+    request<CategoryResponse>(`/categories/${id}`, { method: 'PUT', body: { name } }),
 };
 
 export const locationsApi = {
@@ -112,6 +130,9 @@ export const bookingsApi = {
 export const paymentsApi = {
   /** Creates a Stripe Checkout session for an approved booking; the browser is then sent to sessionUrl. */
   checkout: (bookingId: number) => request<PaymentResponse>(`/pay/${bookingId}`, { method: 'POST' }),
+  /** Admin: all payments (filters optional). Agency and customer: only their own, owner/renter filters ignored. */
+  list: (params: { ownerId?: number; renterId?: number; status?: PaymentStatus | ''; page?: number; size?: number }) =>
+    request<PageResponse<PaymentSummary>>('/pay/payments', { query: { ...params } }),
 };
 
 export const customerProfileApi = {
