@@ -2,6 +2,7 @@ package com.ga.notification_service.service;
 
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -17,29 +18,46 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * A user can keep several connections open at once, for example from different devices.
  * The connections are kept in memory, so notifications are only delivered to users who are
  * connected at that moment, and nothing is stored for users who are offline.
+ * <p>
+ * Closed connections are removed as soon as Spring reports them (completion, timeout or
+ * error). A heartbeat every 25 seconds keeps idle streams open through proxies such as
+ * CloudFront, which close connections after 60 seconds of silence, and also detects clients
+ * that disappeared without closing the connection.
  */
 @Service
 public class NotificationService {
+    // a connection lives at most 30 minutes, then the frontend reconnects by itself
+    private static final long TIMEOUT_MS = 30 * 60 * 1000L;
+
     private final Map<Long, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
 
     /**
      * Opens a notification stream for a user and keeps it registered so that later events
-     * can be pushed to it. The connection has no timeout, and a {@code CONNECTED} event is
-     * sent straight away to confirm that it works.
+     * can be pushed to it. A {@code CONNECTED} event is sent straight away to confirm that it
+     * works.
      *
      * @param userId the id of the user who wants to receive notifications
      * @return the open connection, which Spring keeps alive and streams to the client
      * @throws IOException if the first event cannot be sent
      */
     public SseEmitter subscribe(Long userId) throws IOException {
-        //creations connection object with 0 timeout
-        SseEmitter emitter = new SseEmitter(0L);
+        SseEmitter emitter = new SseEmitter(TIMEOUT_MS);
         //saves the connections
         //quick note: arraylist cant be modified in a loop(concurrent modification exception)
         emitters.computeIfAbsent(userId, k -> new CopyOnWriteArrayList<>()).add(emitter);
 
+        //drops the connection from the map as soon as it is closed, times out or fails
+        emitter.onCompletion(() -> remove(userId, emitter));
+        emitter.onTimeout(() -> remove(userId, emitter));
+        emitter.onError(e -> remove(userId, emitter));
+
         //just to check if we are connected in postman(test)
-        emitter.send(SseEmitter.event().name("CONNECTED").data("Listening for events"));
+        try {
+            emitter.send(SseEmitter.event().name("CONNECTED").data("Listening for events"));
+        } catch (IOException e) {
+            remove(userId, emitter);
+            throw e;
+        }
 
         //returns the object to spring as an open connection
         return emitter;
@@ -70,12 +88,34 @@ public class NotificationService {
                 emitter.send(SseEmitter.event()
                         .name(eventName)
                         .data(data, MediaType.APPLICATION_JSON));
-            } catch (IOException e) {
+            } catch (IOException | IllegalStateException e) {
                 //the client disconnected, so we drop this connection
-                userEmitters.remove(emitter);
+                remove(userId, emitter);
             }
         }
+    }
 
+    /**
+     * Sends a comment line ({@code : ping}) to every open connection. Browsers ignore it, but it
+     * keeps proxies from closing idle streams and removes connections whose client is gone.
+     */
+    @Scheduled(fixedRate = 25_000)
+    public void heartbeat() {
+        emitters.forEach((userId, userEmitters) -> {
+            for (SseEmitter emitter : userEmitters) {
+                try {
+                    emitter.send(SseEmitter.event().comment("ping"));
+                } catch (IOException | IllegalStateException e) {
+                    remove(userId, emitter);
+                }
+            }
+        });
+    }
 
+    private void remove(Long userId, SseEmitter emitter) {
+        emitters.computeIfPresent(userId, (id, list) -> {
+            list.remove(emitter);
+            return list.isEmpty() ? null : list;
+        });
     }
 }
