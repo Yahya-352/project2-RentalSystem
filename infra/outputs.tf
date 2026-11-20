@@ -17,3 +17,7 @@ output "frontend_url" {
 output "app_url" {
   value = "https://${aws_cloudfront_distribution.main.domain_name}"
 }
+
+output "log_group" {
+  value = aws_cloudwatch_log_group.app.name
+}

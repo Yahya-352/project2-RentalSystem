@@ -18,7 +18,10 @@ resource "aws_instance" "app" {
     http_tokens = "required"
   }
 
-  user_data = file("${path.module}/user_data.sh")
+  user_data = templatefile("${path.module}/user_data.sh", {
+    aws_region = var.aws_region
+    log_group  = aws_cloudwatch_log_group.app.name
+  })
 
   tags = { Name = "${var.project_name}-app" }
 }

@@ -80,3 +80,9 @@ variable "stripe_webhook_secret" {
   type      = string
   sensitive = true
 }
+
+variable "alert_email" {
+  description = "Email that receives CloudWatch alarm notifications (leave empty for none)"
+  type        = string
+  default     = ""
+}

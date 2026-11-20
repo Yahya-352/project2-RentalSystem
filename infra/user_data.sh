@@ -1,5 +1,19 @@
 #!/bin/bash
 dnf install -y docker
+
+# every container's output goes to CloudWatch Logs, one stream per container name
+mkdir -p /etc/docker
+cat > /etc/docker/daemon.json <<'JSON'
+{
+  "log-driver": "awslogs",
+  "log-opts": {
+    "awslogs-region": "${aws_region}",
+    "awslogs-group": "${log_group}",
+    "tag": "{{.Name}}"
+  }
+}
+JSON
+
 systemctl enable --now docker
 
 mkdir -p /usr/local/lib/docker/cli-plugins
