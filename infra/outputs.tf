@@ -21,3 +21,11 @@ output "app_url" {
 output "log_group" {
   value = aws_cloudwatch_log_group.app.name
 }
+
+output "frontend_bucket" {
+  value = aws_s3_bucket.frontend.bucket
+}
+
+output "cloudfront_id" {
+  value = aws_cloudfront_distribution.main.id
+}
