@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.HashMap;
 import java.util.Map;
 
 
@@ -144,6 +145,8 @@ public class StripeService {
         payment.setBookingId(bookingId);
         payment.setOwnerId(booking.ownerId());
         payment.setRenterId(booking.renterId());
+        payment.setMake(booking.make());
+        payment.setModel(booking.model());
         paymentRepository.save(payment);
         return paymentResponse;
     }
@@ -193,7 +196,7 @@ public class StripeService {
                     log.info(message);
                     auditClient.log(payment.getRenterId(), "PAYMENT_COMPLETED", "Payment", payment.getId(), message);
 
-                    Map<String, Object> response = Map.of("bookingId", bookingId, "paymentId", payment.getId(), "status", "PAID");
+                    Map<String, Object> response = notificationData(payment, "PAID");
 
                     notificationClient.sendEvent(payment.getRenterId(), "PAYMENT_RECEIVED", response);
                     notificationClient.sendEvent(payment.getOwnerId(), "BOOKING_PAID", response);
@@ -204,7 +207,7 @@ public class StripeService {
                     log.info(message);
                     auditClient.log(payment.getRenterId(), "PAYMENT_FAILED", "Payment", payment.getId(), message);
 
-                    notificationClient.sendEvent(payment.getRenterId(), "PAYMENT_FAILED", Map.of("bookingId", bookingId, "status", "FAILED"));
+                    notificationClient.sendEvent(payment.getRenterId(), "PAYMENT_FAILED", notificationData(payment, "FAILED"));
                 }
                 paymentRepository.save(payment);
             }
@@ -244,5 +247,15 @@ public class StripeService {
             log.error("Refund for booking {} failed", payment.getBookingId(), e);
             throw new RuntimeException(e);
         }
+    }
+
+    private Map<String, Object> notificationData(Payment payment, String status) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("bookingId", payment.getBookingId());
+        data.put("paymentId", payment.getId());
+        data.put("status", status);
+        data.put("make", payment.getMake());
+        data.put("model", payment.getModel());
+        return data;
     }
 }

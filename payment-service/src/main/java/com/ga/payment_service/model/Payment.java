@@ -39,4 +39,10 @@ public class Payment {
 
     @Column
     private String paymentIntent;
+
+    @Column
+    private String make;
+
+    @Column
+    private String model;
 }
