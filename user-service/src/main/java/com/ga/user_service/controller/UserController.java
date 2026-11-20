@@ -6,6 +6,7 @@ import com.ga.user_service.dto.request.LoginRequest;
 import com.ga.user_service.dto.request.RegisterRequest;
 import com.ga.user_service.dto.request.ResetPasswordToken;
 import com.ga.user_service.dto.response.LoginResponse;
+import com.ga.user_service.dto.response.MessageResponse;
 import com.ga.user_service.dto.response.RegisterResponse;
 import com.ga.user_service.dto.response.UserSummaryResponse;
 import com.ga.user_service.service.UserService;
@@ -55,8 +56,8 @@ public class UserController {
 
     @Operation(summary = "Verify an email address using the token sent by email")
     @GetMapping("/verify")
-    public String verify(@RequestParam @NotBlank(message = "Token is required") String token){
-        return userService.verify(token);
+    public MessageResponse verify(@RequestParam @NotBlank(message = "Token is required") String token){
+        return new MessageResponse(userService.verify(token));
     }
 
     @Operation(summary = "Resend the verification email")

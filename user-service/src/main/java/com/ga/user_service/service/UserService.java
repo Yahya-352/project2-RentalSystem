@@ -122,11 +122,14 @@ public class UserService {
      * @param request the user name, email and password
      * @param role    the role of the new user
      * @return the created user and a confirmation message
-     * @throws ConflictException if the email is already registered
+     * @throws ConflictException if the email or the user name is already registered
      */
     public RegisterResponse createUser(RegisterRequest request , Role role){
         if(userRepository.findByEmail(request.email()).isPresent()){
             throw new ConflictException("Email Already Registered"); //409 - conflict
+        }
+        if(userRepository.existsByUserName(request.userName())){
+            throw new ConflictException("Username Already Taken"); //409 - conflict
         }
         User user = new User();
         user.setUserName(request.userName());

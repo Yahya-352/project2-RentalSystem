@@ -41,7 +41,7 @@ export const usersApi = {
     request<RegisterResponse>('/users/register', { method: 'POST', body }),
   registerAgency: (body: RegisterRequest) =>
     request<RegisterResponse>('/users/register/agency', { method: 'POST', body }),
-  verify: (token: string) => request<string>('/users/verify', { query: { token } }),
+  verify: (token: string) => request<{ message: string }>('/users/verify', { query: { token } }),
   resendVerification: (email: string) =>
     request<string>('/users/resend-verification', { method: 'POST', query: { email } }),
   forgotPassword: (email: string) =>

@@ -22,7 +22,8 @@ export function VerifyPage() {
   const verify = async (value: string) => {
     setState({ busy: true });
     try {
-      setState({ busy: false, ok: (await usersApi.verify(extractToken(value))) || 'Email verified.' });
+      const result = await usersApi.verify(extractToken(value));
+      setState({ busy: false, ok: result?.message || 'Email verified.' });
     } catch (err) {
       setState({ busy: false, error: errorMessage(err) });
     }
