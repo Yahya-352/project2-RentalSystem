@@ -41,9 +41,9 @@ variable "db_username" {
 }
 
 variable "frontend_url" {
-  description = "Public URL of the frontend (used for Stripe redirects)"
+  description = "Public URL of the frontend (used for Stripe redirects); empty means the CloudFront URL"
   type        = string
-  default     = "http://localhost:5173"
+  default     = ""
 }
 
 variable "smtp_username" {

@@ -20,7 +20,7 @@ locals {
     SEED_PASSWORD          = var.seed_password
     STRIPE_TEST_SECRET_KEY = var.stripe_secret_key
     STRIPE_WEB_HOOK_SECRET = var.stripe_webhook_secret
-    FRONTEND_URL           = var.frontend_url
+    FRONTEND_URL           = var.frontend_url != "" ? var.frontend_url : "https://${aws_cloudfront_distribution.main.domain_name}"
   }
 }
 
