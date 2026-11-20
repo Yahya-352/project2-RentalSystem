@@ -95,8 +95,9 @@ public class BookingController {
     @Operation(summary = "Taken date ranges of a car, for the booking calendar",
             description = "Upcoming approved bookings of the car. Each range blocks startDate up to, "
                     + "but not including, endDate: the return day is free for the next pick-up.")
-    public List<BookingCalenderDatesResponse> getBookedDates(@PathVariable Long carId) {
-        return bookingService.getBookedDates(carId);
+    public List<BookingCalenderDatesResponse> getBookedDates(@PathVariable Long carId,
+                                                             @RequestHeader("Authorization") String authHeader) {
+        return bookingService.getBookedDates(carId, authHeader);
     }
 
     @GetMapping("/{id}")

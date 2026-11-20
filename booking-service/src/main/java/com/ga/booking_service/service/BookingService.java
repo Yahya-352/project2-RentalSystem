@@ -115,12 +115,14 @@ public class BookingService {
      * bookings of the car that have not ended yet, in date order. Only the dates are
      * returned, never who booked the car or the price.
      *
-     * @param carId the id of the car
+     * @param carId      the id of the car
+     * @param authHeader the caller's token, passed on to car-service
      * @return the taken date ranges; each one blocks its start date up to, but not including,
      *         its end date (the return day is free for the next pick-up)
      * @throws InformationNotFoundException if the car does not exist or has been deleted
      */
-    public List<BookingCalenderDatesResponse> getBookedDates(Long carId){
+    public List<BookingCalenderDatesResponse> getBookedDates(Long carId, String authHeader){
+        carClient.getCar(carId, authHeader);
 
         List<Booking> bookings = bookingRepository
                 .findByCarIdAndStatusAndEndDateAfterOrderByStartDateAsc

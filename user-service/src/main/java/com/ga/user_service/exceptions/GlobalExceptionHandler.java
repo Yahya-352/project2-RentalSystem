@@ -9,9 +9,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 
@@ -34,6 +37,26 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex, HttpServletRequest request) {
         return build(ex.getMessage(), HttpStatus.CONFLICT, request);
         //409 ..when we have a conflict with a thing that is already there(duplicates emails)
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException ex, HttpServletRequest request) {
+        return build("Resource not found", HttpStatus.NOT_FOUND, request);
+        //404 .. the url does not exist
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException ex,
+                                                            HttpServletRequest request) {
+        return build("Missing required parameter: " + ex.getParameterName(), HttpStatus.BAD_REQUEST, request);
+        //400 .. a required query parameter was not sent
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
+                                                            HttpServletRequest request) {
+        return build("Invalid value for parameter: " + ex.getName(), HttpStatus.BAD_REQUEST, request);
+        //400 .. a parameter has the wrong type (text instead of a number)
     }
 
     @ExceptionHandler(Exception.class)
