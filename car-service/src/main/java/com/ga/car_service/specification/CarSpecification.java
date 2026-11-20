@@ -3,6 +3,7 @@ package com.ga.car_service.specification;
 import com.ga.car_service.enums.FuelType;
 import com.ga.car_service.enums.TransmissionType;
 import com.ga.car_service.model.Car;
+import com.ga.car_service.model.CarReservation;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
@@ -74,29 +75,29 @@ public class CarSpecification {
                 cb.greaterThanOrEqualTo(root.get("seats"), minSeats));
     }
     /**
-     * Cars that are free for the whole period: no APPROVED booking of the car overlaps it.
+     * Cars that are free for the whole period: no approved booking of the car overlaps it.
+     * Approved bookings come from booking-service through Kafka and are kept in car_reservations.
      * Same overlap rule as BookingService.isCarAvailable (a booking ending on {@code startDate}
-     * does not clash). Becomes {@code NOT EXISTS (SELECT b.id FROM bookings b WHERE b.car_id = car.id
-     * AND b.status = 'APPROVED' AND b.start_date < :endDate AND b.end_date > :startDate)}.
+     * does not clash). Becomes {@code NOT EXISTS (SELECT r.booking_id FROM car_reservations r
+     * WHERE r.car_id = car.id AND r.start_date < :endDate AND r.end_date > :startDate)}.
      *
      * @param startDate the requested pick-up date
      * @param endDate   the requested return date
      */
-//    public static Specification<Car> availableBetween(LocalDate startDate, LocalDate endDate){
-//        return (root, query, cb) -> {
-//            Subquery<Long> subquery = query.subquery(Long.class);
-//            Root<Booking> bookings = subquery.from(Booking.class);
-//
-//            subquery.select(bookings.get("id"));
-//
-//            subquery.where(
-//                    cb.equal(bookings.get("car") , root),
-//                    cb.equal(bookings.get("status") , BookingStatus.APPROVED),
-//                    cb.lessThan(bookings.get("startDate") ,endDate),
-//                    cb.greaterThan(bookings.get("endDate") ,startDate));
-//
-//            return cb.not(cb.exists(subquery)); //return cars that do not exist in subquery
-//        };
-//    }
+    public static Specification<Car> availableBetween(LocalDate startDate, LocalDate endDate){
+        return (root, query, cb) -> {
+            Subquery<Long> subquery = query.subquery(Long.class);
+            Root<CarReservation> reservations = subquery.from(CarReservation.class);
+
+            subquery.select(reservations.get("bookingId"));
+
+            subquery.where(
+                    cb.equal(reservations.get("carId") , root.get("id")),
+                    cb.lessThan(reservations.get("startDate") ,endDate),
+                    cb.greaterThan(reservations.get("endDate") ,startDate));
+
+            return cb.not(cb.exists(subquery)); //return cars that do not exist in subquery
+        };
+    }
 
 }
