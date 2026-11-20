@@ -19,6 +19,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuditClient {
 
+    private final String test;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public void log(Long userId, String action, String entityType, Long entityId, String details){
