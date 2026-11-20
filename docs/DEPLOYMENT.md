@@ -198,7 +198,7 @@ cd /opt/rentride && sudo docker compose -f docker-compose.prod.yml ps
 | Build common | installs the shared module |
 | Backend: Build and Test | `./mvnw verify` for all services in parallel; a failing test stops the pipeline |
 | Backend: Build Images | `docker compose build` |
-| Deploy to AWS | only when the `DEPLOY` parameter is ticked: runs `scripts/release.sh` with tag `1.0.<build number>` |
+| Deploy to AWS | on every build started by a push, or a manual build with `DEPLOY` ticked: runs `scripts/release.sh` with tag `1.0.<build number>`; skipped if any earlier stage fails |
 
 Setup:
 

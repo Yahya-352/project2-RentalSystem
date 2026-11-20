@@ -11,7 +11,7 @@ pipeline {
 
     parameters {
         booleanParam(name: 'DEPLOY', defaultValue: false,
-                description: 'Push the images to ECR and deploy backend and frontend to AWS')
+                description: 'Deploy to AWS on a manual build (builds started by a push always deploy)')
     }
 
     environment {
@@ -54,7 +54,13 @@ pipeline {
         }
 
         stage('Deploy to AWS') {
-            when { expression { params.DEPLOY } }
+            // every push (found by polling) deploys; manual builds deploy only when DEPLOY is ticked
+            when {
+                anyOf {
+                    expression { params.DEPLOY }
+                    triggeredBy 'SCMTrigger'
+                }
+            }
             steps {
                 // AWS access comes from the Jenkins server's IAM role (rentride-jenkins-role),
                 // so no access keys are stored in Jenkins.
