@@ -15,12 +15,12 @@ pipeline {
     }
 
     environment {
-        AWS_REGION = 'eu-central-1'
+        AWS_REGION = 'eu-north-1'
         COMPOSE_PROJECT_NAME = 'rentride'
         IMAGE_TAG = "1.0.${env.BUILD_NUMBER}"
-        // from `terraform output` once the infrastructure exists
-        FRONTEND_BUCKET = ''
-        CLOUDFRONT_ID = ''
+        // from terraform -chdir=infra output (deployment in account 408155628431, eu-north-1)
+        FRONTEND_BUCKET = 'rentride-frontend-408155628431'
+        CLOUDFRONT_ID = 'E2EVOULFE8HLTP'
     }
 
     stages {
@@ -56,10 +56,9 @@ pipeline {
         stage('Deploy to AWS') {
             when { expression { params.DEPLOY } }
             steps {
-                withCredentials([usernamePassword(credentialsId: 'aws-jenkins',
-                        usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                    sh 'sh ./scripts/release.sh'
-                }
+                // AWS access comes from the Jenkins server's IAM role (rentride-jenkins-role),
+                // so no access keys are stored in Jenkins.
+                sh 'sh ./scripts/release.sh'
             }
         }
     }

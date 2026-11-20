@@ -44,7 +44,7 @@ All infrastructure is defined with Terraform in `infra/`.
 AWS access: an IAM user with permission to create the resources in `infra/` (administrator access is simplest for the first setup), configured locally:
 
 ```bash
-aws configure            # access key, secret key, region eu-central-1
+aws configure            # access key, secret key, region eu-north-1
 aws sts get-caller-identity
 ```
 
@@ -124,7 +124,7 @@ cp infra/terraform.tfvars.example infra/terraform.tfvars
 
 | Variable | Meaning |
 |---|---|
-| `aws_region` | region for every resource (default `eu-central-1`) |
+| `aws_region` | region for every resource (`eu-north-1`; must match `AWS_REGION` in `Jenkinsfile`) |
 | `instance_type` | `t3.medium` recommended; `t3.micro` is free tier but slow for six services plus Kafka |
 | `smtp_username`, `smtp_password` | mail account used for verification and password emails |
 | `admin_username`, `admin_password` | the admin account created on first start |
@@ -202,16 +202,16 @@ cd /opt/rentride && sudo docker compose -f docker-compose.prod.yml ps
 
 Setup:
 
-1. Build and run Jenkins with Docker access:
+1. Run Jenkins on an EC2 instance with Docker access. The image in `jenkins/` contains everything the pipeline needs (Java 21, Docker CLI with Compose, AWS CLI, Node.js):
    ```bash
    docker build -t rentride-jenkins ./jenkins
-   docker run -d --name jenkins-local --restart unless-stopped -u root -p 8090:8080 \
-     -v jenkinsvol1:/var/jenkins_home -v /var/run/docker.sock:/var/run/docker.sock rentride-jenkins
+   docker run -d --name jenkins --restart unless-stopped -u root -p 8080:8080 \
+     -v jenkins_home:/var/jenkins_home -v /var/run/docker.sock:/var/run/docker.sock rentride-jenkins
    ```
-2. Plugins: Pipeline, Git, Docker Pipeline.
-3. Credentials → add "Username with password", ID `aws-jenkins`: username = AWS access key ID, password = secret access key.
-4. Set `FRONTEND_BUCKET` and `CLOUDFRONT_ID` in `Jenkinsfile` from `terraform output`.
-5. New Item → Pipeline → "Pipeline script from SCM" → this repository, script path `Jenkinsfile`.
+2. Attach an IAM role to the Jenkins instance (`rentride-jenkins-role`) instead of storing access keys. It needs: ECR push to the `rentride/*` repositories, `s3:PutObject`/`DeleteObject`/`ListBucket` on the frontend bucket, `cloudfront:CreateInvalidation`, `ssm:SendCommand`, `ssm:GetCommandInvocation`, `ssm:DescribeInstanceInformation` and `ec2:DescribeInstances`.
+3. Plugins: Pipeline, Git.
+4. Set `AWS_REGION`, `FRONTEND_BUCKET` and `CLOUDFRONT_ID` in `Jenkinsfile` from `terraform output`.
+5. New Item → Pipeline → "Pipeline script from SCM" → this repository, script path `Jenkinsfile`. The job polls the repository every two minutes; a GitHub webhook can replace polling because the Jenkins instance is reachable from the internet.
 
 ## 12. Logs and monitoring
 

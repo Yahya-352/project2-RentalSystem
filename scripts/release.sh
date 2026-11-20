@@ -18,7 +18,7 @@ SERVICES="user-service car-service booking-service payment-service notification-
 
 IMAGE_TAG=${IMAGE_TAG:-1.0.$(date +%Y%m%d%H%M)}
 AWS_REGION=${AWS_REGION:-$(aws configure get region || true)}
-AWS_REGION=${AWS_REGION:-eu-central-1}
+AWS_REGION=${AWS_REGION:-eu-north-1}
 export AWS_DEFAULT_REGION=$AWS_REGION
 
 tf_output() { terraform -chdir=infra output -raw "$1"; }

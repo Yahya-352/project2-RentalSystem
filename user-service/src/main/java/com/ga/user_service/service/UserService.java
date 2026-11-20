@@ -20,6 +20,7 @@ import com.ga.user_service.security.JWTUtils;
 import com.ga.user_service.security.MyUserDetails;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
@@ -56,6 +57,10 @@ public class UserService {
     private final AuthenticationManager authenticationManager;
 
     private final AuditClient auditClient;   // new
+
+    // links in emails open the frontend, which calls the API with the token
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
 
 
     /**
@@ -139,7 +144,7 @@ public class UserService {
         user.setVerificationToken(token);
         user.setVerificationTokenExpiryDate(LocalDateTime.now().plusHours(1));
 
-        String link = "http://localhost:8081/users/verify?token=" + token;
+        String link = frontendUrl + "/verify?token=" + token;
 
         User createdUser = userRepository.save(user);
 
@@ -208,7 +213,7 @@ public class UserService {
         user.setVerificationTokenExpiryDate(LocalDateTime.now().plusHours(1));
         userRepository.save(user);
 
-        String link = "http://localhost:8081/users/verify?token=" + token;
+        String link = frontendUrl + "/verify?token=" + token;
         emailService.sendEmail(user.getEmail(), "Verify your account",
                 "Click to verify: " + link);
 
@@ -239,7 +244,7 @@ public class UserService {
         userRepository.save(user);
 
         //send the email
-        String link = "http://localhost:8081/users/reset-password?token=" + passwordRecoveryToken;
+        String link = frontendUrl + "/reset-password?token=" + passwordRecoveryToken;
         emailService.sendEmail(user.getEmail(), "Recover your password",
                 "Click to reset your password: " + link);
 
