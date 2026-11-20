@@ -19,6 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Tag(name = "Bookings", description = "Create, approve, reject, cancel and view car bookings")
@@ -82,13 +83,20 @@ public class BookingController {
         return bookingService.cancelBooking(id, authentication);
     }
 
-    @Operation(summary = "List all bookings, optionally filtered by status (admin only)")
+    @Operation(summary = "List all bookings with optional filters (admin only)",
+            description = "Filters: status, ownerId (agency), renterId, carId, paid, from, to. "
+                    + "With both from and to, returns bookings overlapping that period.")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public PageResponse<BookingResponse> getAllBookings(Authentication authentication,
-                                                        @RequestParam(required = false) String status,
+    public PageResponse<BookingResponse> getAllBookings(@RequestParam(required = false) String status,
+                                                        @RequestParam(required = false) Long ownerId,
+                                                        @RequestParam(required = false) Long renterId,
+                                                        @RequestParam(required = false) Long carId,
+                                                        @RequestParam(required = false) Boolean paid,
+                                                        @RequestParam(required = false) LocalDate from,
+                                                        @RequestParam(required = false) LocalDate to,
                                                         @PageableDefault(size = 10) Pageable pageable) {
-        return bookingService.getAllBookings(authentication, status, pageable);
+        return bookingService.getAllBookings(status, ownerId, renterId, carId, paid, from, to, pageable);
     }
 
     @GetMapping("/car/{carId}/dates")

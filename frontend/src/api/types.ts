@@ -115,6 +115,7 @@ export interface BookingResponse {
   make: string;
   model: string;
   renterId: number;
+  ownerId: number;
   startDate: IsoDate;
   endDate: IsoDate;
   totalPrice: number;

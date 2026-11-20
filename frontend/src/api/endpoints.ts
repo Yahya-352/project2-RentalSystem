@@ -121,8 +121,19 @@ export const bookingsApi = {
   approve: (id: number) => request<BookingResponse>(`/bookings/${id}/approve`, { method: 'PATCH' }),
   reject: (id: number) => request<BookingResponse>(`/bookings/${id}/reject`, { method: 'PATCH' }),
   cancel: (id: number) => request<BookingResponse>(`/bookings/${id}/cancel`, { method: 'PATCH' }),
-  all: (params: { status?: BookingStatus | ''; page?: number; size?: number; sort?: string }) =>
-    request<PageResponse<BookingResponse>>('/bookings', { query: { ...params } }),
+  /** Admin only. Every filter is optional; with both from and to, bookings overlapping that period. */
+  all: (params: {
+    status?: BookingStatus | '';
+    ownerId?: number;
+    renterId?: number;
+    carId?: number;
+    paid?: boolean;
+    from?: IsoDate;
+    to?: IsoDate;
+    page?: number;
+    size?: number;
+    sort?: string;
+  }) => request<PageResponse<BookingResponse>>('/bookings', { query: { ...params } }),
   /** Upcoming approved bookings of a car, for the availability calendar. */
   bookedDates: (carId: number) => request<BookedDateRange[]>(`/bookings/car/${carId}/dates`),
 };

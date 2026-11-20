@@ -6,6 +6,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -14,7 +15,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-public interface BookingRepository extends JpaRepository<Booking , Long> {
+public interface BookingRepository extends JpaRepository<Booking , Long>, JpaSpecificationExecutor<Booking> {
     List<Booking> findByRenterId(Long RenterId);
 
     List<Booking> findByCarId(Long carId);
@@ -35,7 +36,7 @@ public interface BookingRepository extends JpaRepository<Booking , Long> {
     @Query("""
        update Booking b
        set b.status = :completed, b.updatedAt = CURRENT_TIMESTAMP
-       where b.status = :approved and b.endDate < :today
+       where b.status = :approved and b.paid = true and b.endDate < :today
        """)
     int completeFinishedBookings(BookingStatus approved, BookingStatus completed, LocalDate today);
 

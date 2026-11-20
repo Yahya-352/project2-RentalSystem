@@ -9,6 +9,7 @@ import com.ga.booking_service.enums.BookingStatus;
 import com.ga.booking_service.model.Booking;
 
 import com.ga.booking_service.repository.BookingRepository;
+import static com.ga.booking_service.specification.BookingSpecification.*;
 
 import com.ga.common.dto.response.PageResponse;
 import com.ga.common.exceptions.BadRequestException;
@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -323,36 +325,58 @@ public class BookingService {
     }
 
     /**
-     * Returns a page of all bookings, optionally filtered by status.
-     * Only admins can reach this method, which is enforced in the controller.
+     * Returns a page of all bookings for the admin. Every filter is optional and the ones sent
+     * are combined. Only admins can reach this method, which is enforced in the controller.
      *
-     * @param authentication the logged-in user
-     * @param status         the booking status to filter by (case-insensitive), or {@code null}
-     *                       for all bookings
-     * @param pageable       the page number, page size and sorting
+     * @param status   the booking status (case-insensitive)
+     * @param ownerId  the agency that owns the car
+     * @param renterId the customer who booked
+     * @param carId    the car
+     * @param paid     {@code true} for paid bookings only, {@code false} for unpaid only
+     * @param from     with {@code to}: bookings overlapping the period; alone: starting on or after it
+     * @param to       with {@code from}: bookings overlapping the period; alone: ending on or before it
+     * @param pageable the page number, page size and sorting
      * @return a page of bookings
-     * @throws InformationNotFoundException if the user does not exist
-     * @throws BadRequestException          if the status is not a valid booking status
+     * @throws BadRequestException if the status is not valid or {@code from} is after {@code to}
      */
-    public PageResponse<BookingResponse> getAllBookings(Authentication authentication ,
-                                                        String status , Pageable pageable) {
-        Long loggedIn = (Long) authentication.getPrincipal();
+    public PageResponse<BookingResponse> getAllBookings(String status, Long ownerId, Long renterId,
+                                                        Long carId, Boolean paid, LocalDate from,
+                                                        LocalDate to, Pageable pageable) {
+        Specification<Booking> spec = (root, query, cb) -> cb.conjunction();
 
-        Page<Booking> bookings;
-
-        if (status != null) {
+        if (status != null && !status.isBlank()) {
             BookingStatus bookingStatus;
             try {
                 bookingStatus = BookingStatus.valueOf(status.toUpperCase());
             } catch (IllegalArgumentException e) {
                 throw new BadRequestException("Invalid booking status: " + status);
             }
-            bookings = bookingRepository.findByStatus(bookingStatus, pageable);
-        } else {
-            bookings = bookingRepository.findAll(pageable);
+            spec = spec.and(hasStatus(bookingStatus));
+        }
+        if (ownerId != null) {
+            spec = spec.and(hasOwner(ownerId));
+        }
+        if (renterId != null) {
+            spec = spec.and(hasRenter(renterId));
+        }
+        if (carId != null) {
+            spec = spec.and(hasCar(carId));
+        }
+        if (paid != null) {
+            spec = spec.and(isPaid(paid));
+        }
+        if (from != null && to != null) {
+            if (from.isAfter(to)) {
+                throw new BadRequestException("From date must be before to date");
+            }
+            spec = spec.and(overlaps(from, to));
+        } else if (from != null) {
+            spec = spec.and(startsOnOrAfter(from));
+        } else if (to != null) {
+            spec = spec.and(endsOnOrBefore(to));
         }
 
-        Page<BookingResponse> responsePage = bookings.map(booking -> toResponse(booking));
+        Page<BookingResponse> responsePage = bookingRepository.findAll(spec, pageable).map(this::toResponse);
         return PageResponse.from(responsePage);
     }
 

@@ -25,14 +25,15 @@ public class BookingScheduler {
     private final AuditClient auditClient;
 
     /**
-     * Every day at 12:00: approved bookings whose return date has passed become COMPLETED.
-     * Writes one audit entry per run when something changed.
+     * Every day at 12:00: approved and paid bookings whose return date has passed become
+     * COMPLETED. Approved bookings that were never paid are left as they are, since the rental
+     * did not really happen. Writes one audit entry per run when something changed.
      */
     @Scheduled(cron = "0 0 12 * * ?")
     public void completeBooking() {
         int count = bookingRepository.completeFinishedBookings
                 (BookingStatus.APPROVED , BookingStatus.COMPLETED  , LocalDate.now());
-        String message = count + " bookings completed (rental period ended)";
+        String message = count + " paid bookings completed (rental period ended)";
         log.info(message);
         if (count > 0) {
             auditClient.log(null, "BOOKINGS_COMPLETED", "Booking", null, message);
