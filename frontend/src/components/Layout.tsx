@@ -10,11 +10,13 @@ const NAV: Record<Role, { to: string; label: string }[]> = {
   CUSTOMER: [
     { to: '/cars', label: 'Browse cars' },
     { to: '/bookings', label: 'My bookings' },
+    { to: '/payments', label: 'Payments' },
     { to: '/profile', label: 'Profile' },
   ],
   AGENCY: [
     { to: '/agency/cars', label: 'My fleet' },
     { to: '/agency/bookings', label: 'Booking requests' },
+    { to: '/agency/payments', label: 'Earnings' },
     { to: '/cars', label: 'Marketplace' },
     { to: '/agency/profile', label: 'Agency profile' },
   ],

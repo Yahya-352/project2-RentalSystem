@@ -4,6 +4,7 @@ import { GuestOnly, RequireAuth } from './auth/RequireAuth';
 import { Layout } from './components/Layout';
 import { EmptyState } from './components/ui';
 import { AccountPage } from './pages/AccountPage';
+import { MyPaymentsPage } from './pages/MyPaymentsPage';
 import { AdminAuditPage } from './pages/admin/AdminAuditPage';
 import { AdminBookingsPage } from './pages/admin/AdminBookingsPage';
 import { AdminCatalogPage } from './pages/admin/AdminCatalogPage';
@@ -46,6 +47,7 @@ export default function App() {
 
           <Route element={<RequireAuth roles={['CUSTOMER']} />}>
             <Route path="/bookings" element={<MyBookingsPage />} />
+            <Route path="/payments" element={<MyPaymentsPage />} />
             <Route path="/profile" element={<CustomerProfilePage />} />
             {/* Stripe Checkout returns here (StripeService success/cancel URLs). */}
             <Route path="/payment/success" element={<PaymentSuccessPage />} />
@@ -55,6 +57,7 @@ export default function App() {
           <Route element={<RequireAuth roles={['AGENCY']} />}>
             <Route path="/agency/cars" element={<MyCarsPage />} />
             <Route path="/agency/bookings" element={<AgencyBookingsPage />} />
+            <Route path="/agency/payments" element={<MyPaymentsPage />} />
             <Route path="/agency/profile" element={<AgencyProfilePage />} />
           </Route>
 
