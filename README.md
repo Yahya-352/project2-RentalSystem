@@ -16,6 +16,7 @@ Agencies list their cars, customers search, book and pay for them online, and ad
 | [Concurrency analysis](docs/race-condition.md) | Race conditions and how each one is prevented |
 | [Project planning](docs/planning.md) | Scope, phases, timeline and progress |
 | [Frontend](frontend/README.md) | Setup and structure of the React app |
+| [Architecture diagram](docs/architecture.png) | AWS deployment: networks, servers, database, CI/CD and supporting services |
 | [ERD](docs/ERD_Updated.png) | Entity relationship diagram |
 | [User stories (Jira)](https://yahya-altaraifi.atlassian.net/jira/core/projects/RR/board?filter=&groupBy=none) | User stories by role |
 
@@ -97,6 +98,12 @@ Agencies list their cars, customers search, book and pay for them online, and ad
 ---
 
 ## System Architecture
+
+### AWS deployment
+
+![RentRide architecture on AWS](docs/architecture.png)
+
+### Services and communication
 
 ```
                          ┌──────────────────────────┐
