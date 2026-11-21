@@ -154,6 +154,75 @@ Make the booking and payment workflows safe under concurrent requests, and add t
 - **API:** new `/countries`, `/cities`, `/bookings/car/{carId}/dates`, `/pay/{bookingId}`, `/pay/webhook`; changed `GET /cars/` (filters), car create/update (`cityId`), cancel (refund)
 - **Testing:** unit test and integration test for concurrent approvals, manual Stripe tests with the test card and `stripe listen`
 
+## Project 4: Microservices and Cloud
+
+### Scope
+Split the application into independently deployable microservices, connect them with Apache Kafka, containerise them, and deliver them to AWS through infrastructure as code and an automated CI/CD pipeline.
+
+### Phases
+
+| Phase | Work | Status |
+|---|---|---|
+| 1 | Split the monolith into six services and a shared `common` module | Done |
+| 2 | Asynchronous messaging with Kafka | Done |
+| 3 | Containerisation with Docker and Docker Compose | Done |
+| 4 | AWS infrastructure with Terraform | Done |
+| 5 | Admin and payment features, CQRS read model | Done |
+| 6 | Automated tests (unit, concurrency, Cucumber) | Done |
+| 7 | Jenkins CI/CD with automatic deployment to AWS | Done |
+| 8 | Monitoring, documentation and cleanup | In progress |
+
+### Tasks and Progress
+
+**Phase 1: Microservices split**
+- [x] user-service (8081), car-service (8082), booking-service (8083), payment-service (8084), notification-service (8085), audit-service (8086)
+- [x] `common` module: JWT filter, security configuration, global exception handler, shared DTOs
+- [x] Synchronous calls between services with `RestClient` (booking → car, payment → booking)
+- [x] Internal endpoints protected with an internal API key
+- [x] One `.env` per service for secrets
+
+**Phase 2: Kafka**
+- [x] Kafka 4 in KRaft mode (no ZooKeeper)
+- [x] Topics `audit-events`, `notification-events` and `booking-events`, with event records in `common/events`
+- [x] Audit logs and notifications moved from REST calls to events
+- [x] `eventId` on every event, and duplicate audit events ignored
+- [x] Old REST audit and notification endpoints removed
+
+**Phase 3: Docker**
+- [x] One multi-stage `Dockerfile`, parameterised by service name and port
+- [x] `docker-compose.yml` with PostgreSQL, Kafka and the six services, health checks and a persistent volume
+- [x] Production compose file without a database (RDS) and with memory limits
+
+**Phase 4: Terraform and AWS**
+- [x] VPC, subnets and security groups
+- [x] RDS PostgreSQL in a private subnet
+- [x] EC2 host with Docker installed by `user_data`, IMDSv2, and access through SSM (no SSH)
+- [x] ECR repositories with scan on push, immutable tags and lifecycle rules
+- [x] Secrets in SSM Parameter Store, read through the instance IAM role
+- [x] S3 and CloudFront for the frontend, with `/api/*` routed to the services
+
+**Phase 5: Features**
+- [x] Car reservations read model in car-service, fed by `booking-events` (CQRS)
+- [x] Admin pages: users, bookings with filters, payments, catalogue, audit log
+- [x] Payment history for customers and agencies
+- [x] Booking search with JPA Specifications
+
+**Phase 6: Testing**
+- [x] Unit tests for the booking service (JUnit 5, Mockito)
+- [x] Concurrency test for overlapping approvals
+- [x] Ten Cucumber scenarios for the booking lifecycle
+
+**Phase 7: CI/CD**
+- [x] Jenkins in Docker with the Docker CLI, AWS CLI and Node.js
+- [x] Pipeline: build `common`, test the services in parallel, publish JUnit reports, build images
+- [x] Automatic release on every push: push images to ECR, deploy with SSM Run Command, publish the frontend to S3, invalidate CloudFront
+
+**Phase 8: Monitoring, documentation and cleanup**
+- [x] CloudWatch log group, error metric filter, CPU and status-check alarms, SNS email alerts
+- [x] Deployment guide and a rewritten README
+- [ ] Move the approval lock to the database for multiple instances
+- [ ] Remove the old monolith code from the repository
+
 ## Way of Working
 
 - Each feature was built on its own Git branch and merged into `main` when it worked.

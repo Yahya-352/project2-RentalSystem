@@ -1,115 +1,89 @@
-# RentRide — Rental System Frontend
+# RentRide Frontend
 
-React 19 + TypeScript + Vite web client for the Spring Boot backend in the repository root
-(one level above this folder). Prices are shown in Bahraini Dinar (BHD).
+Single-page web client for the RentRide microservices, built with React 19, TypeScript and Vite. Prices are shown in Bahraini Dinar (BHD).
+
+For the overall architecture and backend setup, see the [main README](../README.md).
 
 ## Requirements
 
-- **Node.js 18, 20 or 22+** (npm comes with it) — check with `node -v`
-- **The backend running** on `http://localhost:8080`, with its PostgreSQL database and
-  environment variables set up. Follow the Installation section of the backend README
-  (`README.md` in the repository root) first.
+- **Node.js 18 or newer** (check with `node -v`)
+- **The backend running.** The simplest way is `docker compose up -d` from the repository root, which starts PostgreSQL, Kafka and the six services on ports 8081–8086.
 
 ## Run it
 
 ```bash
-# 1. start the backend (see its README) and wait until it has started
-# 2. in a second terminal, from the repository root:
 cd frontend
-npm install        # first time only: downloads the dependencies
-npm run dev        # starts the app on http://localhost:5173
+npm install        # first time only
+npm run dev        # http://localhost:5173
 ```
 
-Open **http://localhost:5173**. Stop it with `Ctrl + C`. Keep the terminal open while using it.
+| Script | Purpose |
+|---|---|
+| `npm run dev` | Development server with hot reload |
+| `npm run build` | Type check and production build into `dist/` |
+| `npm run preview` | Serve the production build on port 4173 (also proxies `/api`) |
 
-Backend on another host or port? Copy `.env.example` to `.env` and set `BACKEND_URL`.
+## Configuration
 
-### Test accounts and sample data
+Copy `.env.example` to `.env` (git ignores it) to override the defaults:
 
-On first start, the backend's `DataSeeder` creates these accounts (one-click buttons on the
-login page in development), 9 makes, 6 categories, 6 cars owned by the agency (plates
-`SEED-001`…`SEED-006`) and 6 bookings by the customer covering every status.
-
-| Role     | Email                 | Password    |
-|----------|-----------------------|-------------|
-| Customer | customer@rental.com   | Test1234!   |
-| Agency   | agency@rental.com     | Test1234!   |
-| Admin    | value of `ADMIN_USERNAME` (e.g. admin@rental.com) | value of `ADMIN_PASSWORD` (e.g. Admin123!) |
-
-Seeding only adds what is missing, so restarting never duplicates data. Registering a new
-account sends a verification email to the Mailtrap inbox configured for the backend.
-
-## Features by role
-
-| Role     | What they can do |
-|----------|------------------|
-| Everyone | Log in, register (customer or agency), verify email, forgot / reset password, change password, live notification bell |
-| Customer | Browse cars (filter by location, category or make; sort; paging), swipeable car photos, car details with a photo gallery, request a booking with a price preview, view / cancel own bookings, profile with photo upload |
-| Agency   | My fleet: add / edit / delete cars, upload several photos at once; booking requests: approve / reject / cancel, with stats; agency profile with logo upload |
-| Admin    | All bookings (status filter, paging), activate / deactivate users and approve agencies by user id |
-
-Booking events (created, approved, rejected) arrive live as pop-ups and in the bell menu, and
-refresh the open bookings page.
+| Variable | Default | Purpose |
+|---|---|---|
+| `USER_SERVICE_URL` … `AUDIT_SERVICE_URL` | `http://localhost:8081` … `8086` | Where the dev proxy forwards each service's paths |
+| `VITE_API_BASE` | `/api` | Prefix for every API call |
+| `VITE_DEMO_CUSTOMER_EMAIL`, `VITE_DEMO_AGENCY_EMAIL`, `VITE_DEMO_ADMIN_EMAIL` | seeded emails | Accounts behind the one-click demo buttons on the login page |
+| `VITE_DEMO_SEED_PASSWORD`, `VITE_DEMO_ADMIN_PASSWORD` | empty | Passwords for those buttons. They must match `SEED_PASSWORD` and `ADMIN_PASSWORD` in user-service |
 
 ## How it talks to the backend
 
-The backend has no CORS configuration, so the browser never calls `:8080` directly. Every
-request goes to `/api/...` on the Vite server, which forwards it to the backend with the `/api`
-prefix removed (`vite.config.ts`). For a production deployment, serve the built `dist/` folder
-behind a reverse proxy (nginx, etc.) that does the same `/api` → backend mapping.
+The browser only ever calls its own origin under `/api`. The first path segment decides which service receives the request, and the `/api` prefix is removed before forwarding:
 
-- **Login** — the JWT from `POST /users/login` is kept in `localStorage` and sent as
-  `Authorization: Bearer …`. The app logs out when the token expires or the backend rejects it.
-- **Images** — car photos (`GET /images/{id}`), the customer photo (`GET /profiles/customer/picture`)
-  and the agency logo (`GET /profiles/agency/logo`) require the JWT, which an `<img>` tag can't
-  send, so the app downloads them with the token and caches them for the session. Card
-  carousels only load the visible photo and the next one.
-- **Makes and categories** — loaded from `GET /makes` and `GET /categories` once per page load.
-- **Live notifications** — `GET /notifications/stream` (Server-Sent Events) is read with `fetch`
-  because `EventSource` can't send an `Authorization` header; it reconnects automatically.
+| Path | Service |
+|---|---|
+| `/api/users`, `/api/profiles` | user-service (8081) |
+| `/api/cars`, `/api/images`, `/api/makes`, `/api/categories`, `/api/countries`, `/api/cities` | car-service (8082) |
+| `/api/bookings` | booking-service (8083) |
+| `/api/pay` | payment-service (8084) |
+| `/api/notifications` | notification-service (8085) |
+| `/api/audit-logs` | audit-service (8086) |
 
-## Backend changes made for this frontend
+- **Development:** the Vite proxy (`vite.config.ts`) does the routing.
+- **Production:** the built app is hosted on S3. CloudFront serves it and routes `/api/*` to the services; a CloudFront function strips the prefix. Releases are automated by the CI/CD pipeline (see [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md)).
 
-Everything else in the backend was already there or was written by the backend's author.
+Implementation notes:
 
-- `POST /profiles/agency/logo` — agency logo upload (`AgencyProfileController`,
-  `AgencyProfileService.uploadLogo`), a copy of the customer picture upload.
-- `DataSeeder.seedCars()` and `seedBookings()` — the sample cars and bookings above.
+- **Authentication.** The JWT from `POST /users/login` is stored in `localStorage` and sent as `Authorization: Bearer …`. The app logs out when the token expires or is rejected.
+- **Protected images.** Car photos, profile pictures and agency logos need the JWT, which an `<img>` tag cannot send. The app downloads them with the token and caches them for the session.
+- **Live notifications.** `GET /notifications/stream` (Server-Sent Events) is read with `fetch`, because `EventSource` cannot send an `Authorization` header. The stream reconnects automatically.
+- **Payments.** "Pay now" opens Stripe Checkout. Stripe then redirects back to the payment success or cancel page.
 
-## Known limitations
+## Features by role
 
-1. **Car photos can't be deleted** — the backend has no endpoint for it.
-2. **No list of users** — the admin activates / deactivates users by typing their id.
-3. **Car search uses one filter at a time** (location, else category, else make), so the UI
-   offers one filter at a time.
-4. **Browsing requires a login** — `GET /cars/` is protected.
-5. **Email links point at `:8080`** — the verify link works as is; for password reset, paste the
-   token (or the whole link) into the *Reset password* page.
-6. **Bookings never become COMPLETED automatically** and cancelling sends no notification —
-   both are backend behaviour.
-
-## Troubleshooting
-
-| Problem | Cause / fix |
-|---------|-------------|
-| "Cannot reach the server. Is the backend running?" | Start the backend on port 8080, or set `BACKEND_URL` in `.env`. |
-| Every login says "Invalid email or password" and takes ~30 s | The backend ran out of database connections: each open notification stream holds one and never returns it. Restart the backend. Permanent fix: in `NotificationController.stream`, take the user from `((MyUserDetails) authentication.getPrincipal()).getUser()` instead of querying the database. |
-| "Too many requests, try again in N seconds" | The backend allows 5 login / register / password requests per minute per address. Wait a minute. |
-| App opens on port 5174 instead of 5173 | Another copy is already running on 5173. Stop it, or just use 5174. |
-| "X is not defined" right after editing code | The dev server picked up a half-saved file. Stop it (`Ctrl + C`), run `npm run dev` again and hard-reload the browser (`Ctrl + F5`). |
+| Role | Pages and actions |
+|---|---|
+| Everyone | Log in, register as a customer or agency, verify email, forgot and reset password, change password, live notification bell |
+| Customer | Search cars with combined filters and date availability, car details with a photo gallery and an availability calendar, request a booking with a price preview, pay with Stripe, view and cancel bookings, payment history, profile with photo |
+| Agency | Manage the fleet (add, edit and delete cars, upload several photos at once), approve, reject or cancel booking requests, payments received, agency profile with logo |
+| Admin | Users (search, filter, activate, deactivate, approve agencies), all bookings with filters, all payments, catalogue of makes and categories, audit log |
 
 ## Project layout
 
 ```
 src/
   api/            client.ts (fetch wrapper, errors), endpoints.ts (one function per endpoint), types.ts (DTOs)
-  auth/           AuthContext (session / JWT), RequireAuth (role-based routes), ProfileImageContext (avatar image)
-  notifications/  live notification stream + pop-ups
-  components/     Layout (nav, bell, user menu), CarForm, CarPhoto (swipeable carousels),
-                  PhotoPicker (photo / logo upload), shared UI pieces
-  pages/          auth/, customer/, agency/, admin/, AccountPage
-  lib/            formatting (BHD), enums, useAsync and useCatalog hooks
+  auth/           AuthContext (session and JWT), RequireAuth (role-based routes), profile image context
+  notifications/  live notification stream and pop-ups
+  components/     Layout, CarForm, CarPhoto (carousels), AvailabilityCalendar, PhotoPicker, shared UI pieces
+  pages/          auth/, customer/, agency/, admin/, AccountPage, MyPaymentsPage
+  lib/            formatting (BHD), constants, useAsync, useCatalog and useLocations hooks
 ```
 
-Scripts: `npm run dev` (development server), `npm run build` (type check + production build into
-`dist/`), `npm run preview` (serve the production build on port 4173, also proxying `/api`).
+## Troubleshooting
+
+| Problem | Cause and fix |
+|---|---|
+| "Cannot reach the server" | A service is not running. Check it with `docker compose ps`, or point the matching `*_SERVICE_URL` at the right address. |
+| Demo buttons fail to log in | `VITE_DEMO_*` passwords do not match the backend's `SEED_PASSWORD` or `ADMIN_PASSWORD`. |
+| "Too many requests, try again in N seconds" | user-service rate-limits login and registration per client address. Wait a minute. |
+| Payment stays unpaid | Stripe cannot reach the webhook. Locally, run `stripe listen --forward-to localhost:8084/pay/webhook`. |
+| App opens on port 5174 | Another dev server is already running on 5173. |

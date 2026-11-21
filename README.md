@@ -1,550 +1,447 @@
 # RentRide
 
-RentRide is a REST API for renting cars, where customers book cars, agencies list and manage them, and admins oversee the platform.
+**A car rental platform built as event-driven Spring Boot microservices, deployed on AWS with Terraform and a Jenkins CI/CD pipeline.**
+
+Agencies list their cars, customers search, book and pay for them online, and administrators oversee the whole platform. The system is split into six independently deployable services that communicate over REST and Apache Kafka. A React single-page application sits in front of them.
+
+**Live demo:** https://d3lwgdw2frxsbt.cloudfront.net
+
+---
 
 ## Table of Contents
 
-1. [Project Information](#project-information)
-2. [Technologies](#technologies)
-3. [Architecture](#architecture)
-4. [General Approach](#general-approach)
-5. [User Stories](#user-stories)
-6. [ERD](#erd)
-7. [Planning](#planning)
-8. [Project 3 Changes](#project-3-changes)
-9. [API Documentation](#api-documentation)
-10. [Installation](#installation)
-11. [Unsolved Problems](#unsolved-problems)
-12. [Major Challenges](#major-challenges)
-13. [Future Improvements](#future-improvements)
-14. [External Resources](#external-resources)
+1. [Features](#features)
+2. [Technology Stack](#technology-stack)
+3. [System Architecture](#system-architecture)
+4. [Services](#services)
+5. [Event-Driven Communication](#event-driven-communication)
+6. [Data Model](#data-model)
+7. [Security](#security)
+8. [Concurrency and Data Consistency](#concurrency-and-data-consistency)
+9. [Repository Structure](#repository-structure)
+10. [Getting Started](#getting-started)
+11. [Configuration](#configuration)
+12. [API Documentation](#api-documentation)
+13. [Testing](#testing)
+14. [CI/CD Pipeline](#cicd-pipeline)
+15. [Cloud Infrastructure](#cloud-infrastructure)
+16. [Monitoring and Logging](#monitoring-and-logging)
+17. [Known Limitations and Roadmap](#known-limitations-and-roadmap)
+18. [Further Documentation](#further-documentation)
+19. [Acknowledgements](#acknowledgements)
 
 ---
 
-## Project Information
+## Features
 
-### Description
+### Customers
+- Register, verify their email address, log in, and recover or change their password.
+- Manage a profile and a profile picture.
+- Search cars with filters that can be combined: country, city, category, make, price range, seats, transmission, fuel type, and **availability between two dates**.
+- See a calendar of each car's booked dates, and request a booking (the price is calculated automatically).
+- Pay approved bookings through **Stripe Checkout**. Cancelling a paid booking refunds it automatically.
+- Receive real-time notifications over Server-Sent Events, and view their own bookings and payment history.
 
-RentRide is a backend REST API built with Spring Boot. It lets agencies publish cars for rent, lets customers search for cars and book them for a date range, and gives admins the tools to approve agencies and manage user accounts. Access is protected with JWT authentication and three roles: customer, agency and admin.
+### Agencies
+- Register and wait for administrator approval before they can log in.
+- Manage an agency profile and logo.
+- Create, update and remove car listings, and upload car images.
+- Approve, reject or cancel the booking requests on their cars, and view the payments they received.
 
-### Application Purpose
+### Administrators
+- Approve agencies, and activate or deactivate any account.
+- Search users, bookings and payments with filters and pagination.
+- Manage the car catalogue (makes and categories).
+- Browse the platform-wide audit log.
 
-Renting a car usually means calling several agencies and checking availability by hand. This application puts the whole flow in one place:
-
-- Agencies publish their cars and decide which booking requests to accept.
-- Customers browse the available cars, request a booking for specific dates, and get notified when the agency answers.
-- Admins keep the platform safe by approving new agencies and deactivating accounts when needed.
-
-### Main Features
-
-**Customers**
-- Register, verify their email address, and log in
-- Create and update a profile, and upload a profile picture
-- Browse cars with pagination, filtered by location, category or make
-- Book a car for a date range (the total price is calculated automatically)
-- View their own bookings and cancel them
-- Receive real-time booking notifications (Server-Sent Events)
-
-**Agencies**
-- Register, verify their email address, and wait for admin approval before they can log in
-- Create and update an agency profile
-- Create, update and delete car listings (deleted cars are hidden, not removed from the database)
-- Upload car images (JPG or PNG)
-- View the bookings made on their cars, and approve, reject or cancel them
-
-**Admins**
-- Activate and deactivate user accounts
-- Approve pending agency accounts
-- View all bookings, optionally filtered by status
-
-**General**
-- JWT authentication with role-based access control
-- Email verification, password recovery and password change
-- Booking rules: no bookings in the past, the start date must be before the end date, and approved bookings cannot overlap for the same car
-- Audit log that records important actions (registration, approvals, bookings and so on)
-- Consistent JSON error responses from a global exception handler
-- Request rate limiting
-- Database seeding for local testing
-- Swagger / OpenAPI documentation
+### Platform
+- Scheduled jobs complete finished bookings and expire requests that were never answered.
+- Every service returns the same JSON error format.
+- Rate limiting on login and registration.
+- Seed data for demos: an admin, a test agency and customer, sample cars with photos, and bookings in every status.
 
 ---
 
-## Technologies
+## Technology Stack
 
-- Java 25
-- Spring Boot 4.1.1
-- Spring Security 7 with JWT (jjwt)
-- Spring Data JPA / Hibernate 7
-- PostgreSQL
-- Maven
-- Spring Mail (email verification and password recovery, tested with Mailtrap)
-- Server-Sent Events (SSE) for real-time booking notifications
-- Swagger / OpenAPI (springdoc)
-- Lombok
-- Bean Validation
-- JUnit 5 and Mockito
-- Git / GitHub
+| Layer | Technologies |
+|---|---|
+| **Backend** | Java 21, Spring Boot 4, Spring Security (JWT), Spring Data JPA / Hibernate, Bean Validation, Lombok |
+| **Messaging** | Apache Kafka 4 (KRaft mode, no ZooKeeper), Spring for Apache Kafka |
+| **Database** | PostgreSQL 17 |
+| **Payments** | Stripe Checkout, Stripe webhooks, Stripe refunds |
+| **Email** | Spring Mail over SMTP (Mailtrap in non-production environments) |
+| **Frontend** | React, TypeScript, Vite, React Router |
+| **API docs** | springdoc-openapi (Swagger UI) |
+| **Testing** | JUnit 5, Mockito, Cucumber (BDD) |
+| **Containers** | Docker (multi-stage builds), Docker Compose |
+| **CI/CD** | Jenkins (declarative pipeline), Amazon ECR, AWS Systems Manager Run Command |
+| **Infrastructure as Code** | Terraform (AWS provider 6) |
+| **Cloud** | AWS: VPC, EC2, RDS, ECR, S3, CloudFront, SSM Parameter Store, IAM, CloudWatch, SNS |
 
 ---
 
-## Architecture
-
-The application follows a standard layered architecture:
+## System Architecture
 
 ```
-Client (Postman / Swagger)
-        |
-        v
-  Controller layer   - HTTP endpoints, request validation, status codes
-        |
-        v
-   Service layer     - business rules, authorization checks, audit logging
-        |
-        v
- Repository layer    - Spring Data JPA
-        |
-        v
-    PostgreSQL
+                         ┌──────────────────────────┐
+     Browser ──────────▶ │        CloudFront        │
+                         └─────┬──────────────┬─────┘
+                  static files │              │ /api/*
+                               ▼              ▼
+                      ┌──────────────┐   ┌───────────────────────────── EC2 (Docker Compose) ──┐
+                      │  S3 (React)  │   │                                                    │
+                      └──────────────┘   │  user ─ car ─ booking ─ payment ─ notification ─ audit
+                                         │    │      │      │        │          │          │   │
+                                         │    └──────┴──────┴────┬───┴──────────┴──────────┘   │
+                                         │                       ▼                             │
+                                         │                 Apache Kafka                        │
+                                         └───────────────────────┬─────────────────────────────┘
+                                                                 │
+                                                                 ▼
+                                                     RDS PostgreSQL (private subnet)
+
+            Stripe ── webhook ──▶ payment-service          SMTP (Mailtrap) ◀── user-service
 ```
 
-Requests and responses use DTOs (Java records), so the database entities are never exposed directly. Errors are thrown as custom exceptions in the service layer and translated into JSON responses by one global handler.
+### Design principles
 
-### Major Components
-
-- **Security:** a JWT filter reads the token from the `Authorization` header, loads the user, and sets the authentication. Roles are enforced with `@PreAuthorize` on the controllers.
-- **Global exception handling:** maps custom exceptions to HTTP statuses (400, 401, 403, 404, 409, 500) and returns the same JSON error body every time.
-- **Agency approval:** a new agency gets the status `UNAPPROVED_AGENCY`. Spring Security treats that account as locked, so it cannot log in until an admin activates it.
-- **Audit logging:** an audit service records who did what, for example registrations, approvals, bookings and car changes.
-- **Notifications:** booking events are pushed to connected users over Server-Sent Events (`/notifications/stream`).
-- **File storage:** car images and profile pictures are validated by their real content (not just the file name), renamed with a random UUID, and stored in the `uploads/` folder.
-- **Rate limiting:** a filter limits repeated requests and returns 429 when the limit is exceeded.
-- **Data seeding:** a startup component creates the admin, categories, makes and test accounts if they don't exist yet.
-
-### Project Structure
-
-```
-src/main/java/com/ga/RentalSystem
-├── config        - OpenAPI configuration, DataSeeder
-├── controller    - REST controllers
-├── dto
-│   ├── request   - request records
-│   └── response  - response records
-├── enums         - Role, UserStatus, BookingStatus, FuelType, TransmissionType
-├── exceptions    - custom exceptions and the global exception handler
-├── model         - JPA entities (User, UserProfile, AgencyProfile, Car, Make, Category, Image, Booking, AuditLog)
-├── repository    - Spring Data repositories
-├── security      - JWT utilities and filter, user details, security configuration
-└── service       - business logic
-```
+- **One service per business capability.** Each service owns its domain logic and can be built, tested, containerised and deployed on its own.
+- **Synchronous calls only when an answer is needed now.** A service uses REST (Spring `RestClient`) only when it needs a reply before it can respond. For example, booking-service asks car-service for a car's price and owner.
+- **Asynchronous events for everything else.** Audit records, notifications and booking state changes are published to Kafka. A slow or unavailable consumer never blocks a user request.
+- **A shared `common` module** holds the JWT filter, the security configuration, the global exception handler, the event contracts and the topic names. Every service applies the same rules in the same way.
+- **CQRS read model.** car-service keeps its own projection of reservations, fed by booking events, so it can answer "which cars are free between these dates" without calling booking-service.
+- **Stateless services.** Authentication is a signed JWT, so any instance of any service can serve any request.
 
 ---
 
-## General Approach
+## Services
 
-I built the project one feature at a time, and each feature was developed on its own Git branch and merged into `main` once it worked. Within a feature I always worked from the inside out: the entity and repository first, then the service with the business rules, and only then the controller. After each step I committed, so the history shows how the project grew.
-
-The structure is deliberately simple. Controllers only receive the request and return the result, services contain all the rules, and repositories only talk to the database. Every rule that can fail throws a custom exception (not found, conflict, forbidden and so on), and a single global handler turns each one into the right HTTP status. That keeps the controllers short and the error responses consistent.
-
-For the major features, authentication uses JWT with Spring Security. Registration creates an unverified user and sends an email with a verification link, and login is blocked until the email is verified. Agencies get one extra step: they start as `UNAPPROVED_AGENCY` and an admin has to approve them. Bookings start as `PENDING`, and the agency approves or rejects them. When approving, the service checks that no other approved booking overlaps the same dates, and the price is calculated from the number of days and the car's daily price. File uploads check the first bytes of the file to confirm it really is a JPG or PNG. Before the documentation step I did a cleanup pass so that every endpoint returns a DTO, and each endpoint returns a sensible status code (201 for creation, 204 for deletion and activation, 200 otherwise).
-
----
-
-## User Stories
-
-The user stories are grouped by role (customer, agency, admin) and system quality, and each one lists the endpoint that implements it.
-
-[User stories (Jira board)](https://yahya-altaraifi.atlassian.net/jira/core/projects/RR/board?filter=&groupBy=none)
-
----
-
-## ERD
-
-![ERD](docs/ERD.png)
-
----
-
-## Planning
-
-The planning document covers the scope, the deliverables by phase with their progress, the timeline, and the way of working.
-
-[Planning document](docs/planning.md)
-
----
-
-## Project 3 Changes
-
-### New functionality
-- **Combined car search:** city, country, category, make, price range, seats, transmission, fuel and **availability between two dates**, all optional and combined (JPA Specifications).
-- **Booking calendar:** the taken dates of a car, so customers pick free days.
-- **Stripe payments:** approved bookings are paid on Stripe Checkout; a webhook marks them paid.
-- **Automatic refunds:** cancelling a paid booking refunds the full amount.
-- **Scheduled jobs:** every day, finished bookings become `COMPLETED` and unanswered requests past their pick-up date become `REJECTED`.
-- **More notifications and audit logs:** payment received, booking paid, payment failed, booking cancelled.
-
-### New models
-- **Country** and **City** (seeded from a JSON dataset); a car now belongs to a city instead of a free-text location.
-- **Payment** (amount, currency, status `PENDING`/`PAID`/`FAILED`/`REFUNDED`, Stripe session and payment intent).
-- **Booking** gained `paid` and `refunded`.
-
-### Concurrency explanation
-| Workflow | What could go wrong | How it is prevented | Why this approach |
+| Service | Port | Responsibility | Main endpoints |
 |---|---|---|---|
-| **Approving bookings** (`PATCH /bookings/{id}/approve`) | Two agency requests approve overlapping bookings at the same time → the car is double-booked | A `ReentrantLock` per car (`ConcurrentHashMap`) makes "check availability + save" one step; the loser gets **409** | Cheap, in-memory, and approvals of different cars don't block each other |
-| **Paying** (`POST /pay/{bookingId}`) | A double click creates two Stripe sessions → the customer pays twice | A pessimistic DB lock on the booking row (`SELECT ... FOR UPDATE`) inside a transaction; the second request waits, then gets **409** | The payments don't exist yet, so the booking row is the lock; works across instances and rolls back with the transaction |
-| **Refunding** | A retry after an error refunds twice | A Stripe **idempotency key** (`refund-booking-{id}`) | Stripe performs the same refund only once |
-| **Scheduled jobs** | A job overwrites a booking that was just cancelled | One bulk `UPDATE ... WHERE status = ...`, which the database re-checks | No load-then-save gap in Java |
+| **user-service** | 8081 | Accounts, authentication, email verification, password recovery, customer and agency profiles, user administration | `/users/**`, `/profiles/**` |
+| **car-service** | 8082 | Car listings, images, search with filters and availability, makes, categories, countries and cities | `/cars/**`, `/images/**`, `/makes`, `/categories`, `/countries`, `/cities` |
+| **booking-service** | 8083 | Booking lifecycle (request, approve, reject, cancel, complete), booked-date calendar, scheduled jobs, admin booking search | `/bookings/**` |
+| **payment-service** | 8084 | Stripe Checkout sessions, the webhook, refunds, payment history | `/pay/**` |
+| **notification-service** | 8085 | Real-time notifications pushed to connected users over Server-Sent Events | `/notifications/stream` |
+| **audit-service** | 8086 | Central, append-only audit trail of important actions across the platform | `/audit-logs` |
+| **common** | n/a | Shared library: security, JWT, exceptions, event records, topic names | n/a |
 
-**Database consistency:** availability, payment and status rules are checked inside the lock or the transaction that writes, so a request never acts on stale data. Full write-ups: [docs/race-condition.md](docs/race-condition.md).
+### Booking lifecycle
 
-**Asynchronous processing:** emails and SSE notifications run with `@Async` on two separate thread pools, so a slow mail server never slows down a request:
-- `emailExecutor` (2–4 threads, queue 100, `CallerRunsPolicy`: an email is never dropped, and the caller sends it when the pool is full)
-- `notificationExecutor` (2–4 threads, queue 100, `DiscardPolicy`: a live notification can be dropped under heavy load)
+```
+PENDING ──approve──▶ APPROVED ──pay──▶ APPROVED + paid ──end date passes──▶ COMPLETED
+   │                    │                    │
+   ├──reject──▶ REJECTED │                    └──cancel──▶ CANCELLED + refunded
+   ├──cancel──▶ CANCELLED◀──cancel──┘
+   └──pick-up date passes without an answer──▶ REJECTED (scheduled job)
+```
 
-The scheduled jobs run on Spring's scheduler thread.
+---
 
-### Testing
-- **Unit test** (`BookingConcurrencyTest`): two threads approve overlapping bookings with mocked repositories (an `AtomicInteger` counts successes) → exactly 1.
-- **Integration test** (`BookingControllerConcurrencyIntegrationTest`): N real `PATCH /bookings/{id}/approve` requests on the same car, started together with two `CountDownLatch`es, against PostgreSQL. Results are collected with `Future`s → exactly **1 × 200** and **N−1 × 409**:
-  ```
-  pool-3-thread-5 -> booking 110 -> 200
-  pool-3-thread-3 -> booking 108 -> 409
-  ...
-  ```
-- **Manual:** paying and refunding with Stripe's test card (`4242 4242 4242 4242`) and `stripe listen`.
+## Event-Driven Communication
 
-### Updated API
-| Endpoint | Change | Access |
+All events are JSON records defined once in `common/events` and shared by every service. Each event carries an `eventId` and an `occurredAt` timestamp. The audit consumers store the `eventId` and skip any event they have already recorded, so redelivered messages never create duplicate entries.
+
+| Topic | Produced by | Consumed by | Purpose |
+|---|---|---|---|
+| `audit-events` | every service | audit-service | Records who did what, and when |
+| `notification-events` | payment-service and other services | notification-service | Direct messages to a specific user |
+| `booking-events` | booking-service | car-service, notification-service, audit-service | Booking state changes. These feed car-service's reservation read model, live notifications and the audit trail |
+
+Kafka runs in **KRaft mode** with two listeners: an internal one for containers and an external one for tools on the host.
+
+---
+
+## Data Model
+
+![Entity relationship diagram](docs/ERD_Updated.png)
+
+The entities are split by ownership (database-per-service pattern):
+
+- **user-service:** User, UserProfile, AgencyProfile
+- **car-service:** Car, Image, Make, Category, Country, City, CarReservation (read model)
+- **booking-service:** Booking
+- **payment-service:** Payment
+- **audit-service:** AuditLog
+
+Services never join across another service's tables. They refer to each other's data by id only.
+
+---
+
+## Security
+
+- **JWT authentication.** user-service issues a signed token at login. Every other service validates it locally with the shared filter, so no call to user-service is needed per request.
+- **Role-based access control** with three roles (`CUSTOMER`, `AGENCY`, `ADMIN`), enforced with `@PreAuthorize`. Ownership is checked as well: for example, only the agency that owns a car can approve its bookings.
+- **Account states.** Unverified emails cannot log in. A new agency stays `UNAPPROVED_AGENCY` until an administrator approves it, and deactivated accounts are locked.
+- **Service-to-service calls.** Internal endpoints (for example, marking a booking as paid) are protected with an internal API key and are not exposed to end users.
+- **Stripe webhooks** are verified with Stripe's signature before they are processed.
+- **Uploads are validated by their content.** Each file's magic bytes are checked, it is stored under a random UUID, and path traversal is prevented.
+- **Secrets are kept out of the repository.** Locally they live in per-service `.env` files, which git ignores. In AWS they are SSM Parameter Store SecureStrings, read by the instance's IAM role at deploy time.
+- **Infrastructure hardening.** The database sits in a private subnet with no public access. The instance requires IMDSv2. There is no SSH, because deployments use SSM Run Command. ECR scans every image on push.
+
+---
+
+## Concurrency and Data Consistency
+
+| Workflow | Risk | Safeguard |
 |---|---|---|
-| `GET /cars/` | **Modified:** combined filters + `startDate`/`endDate` | logged in |
-| `POST /cars/create`, `PUT /cars/update/{id}` | **Modified:** `cityId` instead of `location` | agency |
-| `GET /countries`, `GET /cities?countryId=` | **New** | public |
-| `GET /bookings/car/{carId}/dates` | **New:** taken dates for the calendar | logged in |
-| `PATCH /bookings/{id}/cancel` | **Modified:** refunds paid bookings and notifies the other party | renter / owner |
-| `POST /pay/{bookingId}` | **New:** returns a Stripe Checkout URL (**409** if a payment is pending or done) | renter |
-| `POST /pay/webhook` | **New:** called by Stripe (signature-checked) | Stripe |
+| Approving bookings | Two overlapping bookings approved at the same moment would double-book the car | Per-car lock that makes "check availability, then save" atomic. The loser receives **409 Conflict** |
+| Starting a payment | A double click would create two Stripe sessions | Pessimistic row lock (`SELECT … FOR UPDATE`) on the booking inside the transaction |
+| Refunds | A retry would refund twice | Stripe **idempotency key** per booking |
+| Scheduled jobs | A job overwrites a booking a user changed a moment earlier | Single conditional bulk `UPDATE … WHERE status = …`, re-checked by the database |
+| Kafka consumers | The same event delivered twice | The audit trail is deduplicated on `eventId` |
 
-Booking responses now include `paid` and `refunded`.
-
-### Challenges
-- **Learning Stripe (about 2 days):** understanding the documentation took the longest: Checkout Sessions vs PaymentIntents, webhooks and their signature check, forwarding events locally with the Stripe CLI, an API version mismatch that made the webhook's session object come back empty, amounts in the smallest currency unit (fils/cents), BHD not being supported by the account, and needing the PaymentIntent id (not the session id) for refunds.
-- **Hibernate enum CHECK constraints:** adding `REFUNDED` to the enum didn't update the database constraint, so the first refund succeeded in Stripe but rolled back in the database. The idempotency key made the retry safe.
-- **Adding a required column to a table with data:** `city_id NOT NULL` failed on existing rows; solved with add nullable → fill → set `NOT NULL`.
-- **Locking rows that don't exist yet:** solved by locking the booking instead of its payments.
-- **Making requests really concurrent in a test:** a simple loop runs them one after another; latches were needed.
-
-### Future improvements
-- Charge the real USD equivalent of BHD (the Stripe account doesn't support BHD yet).
-- Expire abandoned Stripe sessions after 30 minutes.
-- Send notifications only after the transaction commits.
-- Move the approval lock to the database so it works across several servers.
+Notifications and emails run on dedicated `@Async` thread pools with bounded queues, so slow external systems never delay API responses. The full analysis is in [docs/race-condition.md](docs/race-condition.md).
 
 ---
 
-## API Documentation
+## Repository Structure
 
-Swagger UI is available when the application is running:
-
-- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
-- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
-
-To call protected endpoints from Swagger:
-
-1. Call `POST /users/login` with a seeded account (see [Seed the database](#5-seed-the-database)).
-2. Copy the token from the response.
-3. Click **Authorize** at the top right, paste the token (without the word `Bearer`), and confirm.
+```
+.
+├── common/                 Shared library (security, JWT, exceptions, Kafka event contracts)
+├── user-service/           Spring Boot service, port 8081
+├── car-service/            Spring Boot service, port 8082
+├── booking-service/        Spring Boot service, port 8083 (includes the Cucumber suite)
+├── payment-service/        Spring Boot service, port 8084
+├── notification-service/   Spring Boot service, port 8085
+├── audit-service/          Spring Boot service, port 8086
+├── frontend/               React + TypeScript single-page application
+├── Dockerfile              One multi-stage Dockerfile, parameterised per service
+├── docker-compose.yml      Full local stack: PostgreSQL, Kafka and the six services
+├── deploy/                 Production compose file and the on-instance deploy script
+├── infra/                  Terraform for the complete AWS environment
+├── jenkins/                Jenkins controller image (Docker, AWS CLI, Node.js)
+├── scripts/release.sh      Build → push to ECR → deploy to EC2 → publish frontend
+├── Jenkinsfile             CI/CD pipeline definition
+└── docs/                   Deployment guide, planning, ERD, concurrency write-up
+```
 
 ---
 
-## Installation
+## Getting Started
 
-### 1. Clone the repository
+### Prerequisites
+
+| Tool | Version |
+|---|---|
+| Docker Desktop (with Compose v2) | latest |
+| Node.js | 18 or newer (frontend only) |
+| JDK | 21 (only to run services outside Docker) |
+| Stripe CLI | optional, to receive payment webhooks locally |
+
+Maven does not need to be installed, because each module ships the Maven wrapper.
+
+### 1. Clone
 
 ```bash
 git clone https://github.com/Yahya-352/project2-RentalSystem.git
 cd project2-RentalSystem
 ```
 
-You need **JDK 21 or newer** and **PostgreSQL** installed. Maven does not need to be installed: the project includes the Maven wrapper (`mvnw` / `mvnw.cmd`), which downloads the right Maven version on first use.
+### 2. Configure secrets
 
-### 2. Configure the application
+Create a `.env` file in each service folder with the variables listed in [Configuration](#configuration). git ignores these files.
 
-The settings are in `src/main/resources`:
-
-| File | Purpose | Database |
-|---|---|---|
-| `application.properties` | Chooses the active profile (`spring.profiles.active`, `dev` by default) | |
-| `application-dev.properties` | Local development: SQL logging and full error details | `RentalSystemSeeded` |
-| `application-test.properties` | Production-style settings: no SQL logging and no stack traces in error responses | `RentalSystem` |
-
-Choose the profile in `application.properties`, or override it with the `SPRING_PROFILES_ACTIVE` environment variable.
-
-### 3. Configure PostgreSQL
-
-Create an empty database for the profile you use. The name is case-sensitive, so keep the quotes:
-
-```sql
--- dev profile (the default)
-CREATE DATABASE "RentalSystemSeeded";
-
--- test profile
-CREATE DATABASE "RentalSystem";
-```
-
-The `dev` profile connects to `jdbc:postgresql://localhost:5432/RentalSystemSeeded` and the `test` profile to `jdbc:postgresql://localhost:5432/RentalSystem`. The tables are created automatically on the first start (`spring.jpa.hibernate.ddl-auto=update`), so you don't need to run any SQL scripts. If your PostgreSQL runs on another host or port, change `spring.datasource.url` in the profile file you use.
-
-### 4. Configure environment variables
-
-Secrets are not stored in the repository. Set these variables before starting the application:
-
-| Variable | Purpose |
-|---|---|
-| `DB_USERNAME` | Database user (defaults to `postgres`) |
-| `DB_PASSWORD` | Database password |
-| `JWT_SECRET` | Secret used to sign JWT tokens. It **must be Base64** (letters, digits, `+`, `/`, `=`) and decode to at least 32 bytes. A plain string containing characters such as `-` makes every login fail. |
-| `SMTP_USERNAME` | Mail server username |
-| `SMTP_PASSWORD` | Mail server password |
-| `ADMIN_USERNAME` | Email address of the admin account created on first start, for example `admin@rental.com` |
-| `ADMIN_PASSWORD` | Password of that admin account, for example `Admin123!` |
-| `STRIPE_TEST_SECRET_KEY` | Stripe test secret key (`sk_test_...`), used to create checkout sessions and refunds. See [Stripe setup](#stripe-setup-test-mode) |
-| `STRIPE_WEB_HOOK_SECRET` | Webhook signing secret (`whsec_...`) printed by `stripe listen`. See [Stripe setup](#stripe-setup-test-mode) |
-| `FRONTEND_URL` | Optional. Where Stripe sends the user back after paying (defaults to `http://localhost:5173`) |
-
-All of these are required except `DB_USERNAME` and `FRONTEND_URL`. If `JWT_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `STRIPE_TEST_SECRET_KEY` or `STRIPE_WEB_HOOK_SECRET` is missing, the application stops at startup with `Could not resolve placeholder '...'`. A missing `DB_PASSWORD` stops it with a database login error, and missing `SMTP_*` values only show up later, when registration or password-reset emails fail to send.
-
-The mail settings point to a [Mailtrap](https://mailtrap.io) sandbox inbox. Create a free inbox there and copy its SMTP username and password. Verification and password recovery emails will appear in the Mailtrap inbox instead of being sent to real addresses.
-
-Generate a valid `JWT_SECRET` once and reuse it:
-
-```powershell
-# PowerShell
-[Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Maximum 256 }))
-```
+### 3. Start the backend
 
 ```bash
-# macOS / Linux
-openssl rand -base64 48
+docker compose up -d --build
 ```
 
-PowerShell:
-
-```powershell
-$env:DB_PASSWORD = "your-db-password"
-$env:JWT_SECRET = "paste-the-generated-base64-secret"
-$env:SMTP_USERNAME = "your-mailtrap-username"
-$env:SMTP_PASSWORD = "your-mailtrap-password"
-$env:ADMIN_USERNAME = "admin@rental.com"
-$env:ADMIN_PASSWORD = "Admin123!"
-$env:STRIPE_TEST_SECRET_KEY = "sk_test_..."
-$env:STRIPE_WEB_HOOK_SECRET = "whsec_..."
-```
-
-macOS / Linux:
+This starts PostgreSQL, Kafka and all six services. Each service waits until the database and the broker are healthy. Check the stack with:
 
 ```bash
-export DB_PASSWORD="your-db-password"
-export JWT_SECRET="paste-the-generated-base64-secret"
-export SMTP_USERNAME="your-mailtrap-username"
-export SMTP_PASSWORD="your-mailtrap-password"
-export ADMIN_USERNAME="admin@rental.com"
-export ADMIN_PASSWORD="Admin123!"
-export STRIPE_TEST_SECRET_KEY="sk_test_..."
-export STRIPE_WEB_HOOK_SECRET="whsec_..."
+docker compose ps
+docker compose logs -f booking-service
 ```
 
-Variables set this way only last for the current terminal window, so start the application from that same window.
-
-In IntelliJ IDEA, add them under **Run → Edit Configurations → Environment variables** instead.
-
-#### Stripe setup (test mode)
-
-Payments use Stripe in **test mode**, so no real money moves and no business details are needed.
-
-1. Create a free account at [stripe.com](https://stripe.com). New accounts start in test mode.
-2. Go to **Developers → API keys** and copy the **Secret key** (`sk_test_...`) into `STRIPE_TEST_SECRET_KEY`.
-3. Install the [Stripe CLI](https://docs.stripe.com/stripe-cli) and forward webhooks to the app:
-   ```bash
-   stripe login
-   stripe listen --forward-to localhost:8080/pay/webhook
-   ```
-   It prints a signing secret (`whsec_...`). Put it in `STRIPE_WEB_HOOK_SECRET`, then start the application. Keep `stripe listen` running while you test.
-4. Pay with the test card `4242 4242 4242 4242`, any future expiry date and any CVC.
-
-Both Stripe variables must be set for the application to start. Everything except payments works without `stripe listen`. Without it you can still open the Stripe payment page, but the booking is never marked **Paid**, and because only paid bookings are refunded, cancelling it does not refund anything.
-
-### 5. Seed the database
-
-Seeding runs automatically every time the application starts, and it only creates data that is missing, so restarting does not create duplicates. It creates:
-
-- The admin account, using `ADMIN_USERNAME` and `ADMIN_PASSWORD`
-- The car categories and makes
-- The GCC countries (Bahrain, Kuwait, Oman, Qatar, Saudi Arabia, United Arab Emirates) and their cities, read from `src/main/resources/data/countries.json` and `countries+cities.json`. Every car must be in one of these cities.
-- One test customer and one test agency (both already verified and active)
-- Six sample cars owned by the test agency (license plates `SEED-001` to `SEED-006`)
-- Two real photos for each sample car, copied from `src/main/resources/seed-images` into `uploads/cars` (only for cars that have no photos yet)
-- Six sample bookings by the test customer, covering every booking status
-
-| Role | Email | Password |
-|---|---|---|
-| Admin | the value of `ADMIN_USERNAME` (e.g. `admin@rental.com`) | the value of `ADMIN_PASSWORD` (e.g. `Admin123!`) |
-| Customer | `customer@rental.com` | `Test1234!` |
-| Agency | `agency@rental.com` | `Test1234!` |
-
-These accounts are for local testing only. The customer and agency password comes from `app.seed.password` in the profile file.
-
-The seeder only creates accounts that don't exist yet. Changing `ADMIN_PASSWORD` or `app.seed.password` later does not change existing accounts, and changing `ADMIN_USERNAME` creates a second admin account next to the old one.
-
-### 6. Start the application
-
-From the project folder:
-
-```bash
-# Windows (PowerShell / CMD)
-.\mvnw.cmd spring-boot:run
-
-# macOS / Linux
-./mvnw spring-boot:run
-```
-
-To pick a profile from the command line:
-
-```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
-```
-
-You can also run `RentalSystemApplication` from IntelliJ IDEA. The application starts on port 8080. An `uploads/` folder is created automatically the first time you upload an image.
-
-### 7. Access the API
-
-The base URL is `http://localhost:8080`. Log in to get a token:
-
-```
-POST /users/login
-Content-Type: application/json
-
-{
-  "email": "customer@rental.com",
-  "password": "Test1234!"
-}
-```
-
-Send the token from the response on every protected request:
-
-```
-Authorization: Bearer <token>
-```
-
-A new agency account has to be approved before it can log in: register it with `POST /users/register/agency`, verify its email, then log in as the admin and call `PATCH /users/{id}/activate`.
-
-### 8. Access Swagger / OpenAPI
-
-Open `http://localhost:8080/swagger-ui/index.html` in your browser. See [API Documentation](#api-documentation) for how to authorize requests.
-
-### 9. Run the frontend
-
-The React web app is in the `frontend/` folder. It needs **Node.js 18 or newer** (check with `node -v`) and the backend from step 6 running.
-
-Open a **second terminal** (keep the backend running in the first one):
+### 4. Start the frontend
 
 ```bash
 cd frontend
-npm install    # first time only
+npm install
 npm run dev
 ```
 
-Open **http://localhost:5173** and log in with one of the seeded accounts from step 5 (the login page has one-click buttons for them). The frontend sends its API calls to `http://localhost:8080`; if your backend runs somewhere else, copy `frontend/.env.example` to `frontend/.env` and change `BACKEND_URL`. More details are in [`frontend/README.md`](frontend/README.md).
+Open **http://localhost:5173**. In development, the Vite proxy routes each `/api/<path>` call to the service that owns it, so the browser only ever talks to one origin.
 
-### 10. Try the whole flow
-
-With the backend, the frontend and `stripe listen` running:
-
-1. Log in as the **customer**, search for a car with a pick-up and return date, open it and press **Request booking**.
-2. Log in as the **agency** (another browser or a private window) and press **Approve** under **Booking requests**. The customer gets a live notification.
-3. As the customer, open **My bookings**, press **Pay now**, and pay with `4242 4242 4242 4242`. The booking turns **Paid**.
-4. Cancel the booking. The payment is refunded automatically and the booking shows **Refunded**.
-
-### Run the tests
+### 5. Receive Stripe webhooks (optional)
 
 ```bash
-./mvnw test
+stripe listen --forward-to localhost:8084/pay/webhook
 ```
 
-Run the tests from a terminal where the environment variables from step 4 are set (or from IntelliJ with the same run configuration). The tests use both databases from step 3: most tests start the application with the default `dev` profile (`RentalSystemSeeded`), and the concurrency integration test (`BookingControllerConcurrencyIntegrationTest`) uses the `test` profile, so the `"RentalSystem"` database must exist too. The integration test creates its own users and car, so it does not need any seeded data.
+Pay with the test card `4242 4242 4242 4242`, any future expiry date and any CVC.
+
+### Seeded accounts
+
+On first start, user-service creates an administrator from `ADMIN_USERNAME` and `ADMIN_PASSWORD`. It also creates a verified test customer (`customer@rental.com`) and a verified test agency (`agency@rental.com`), whose password is `SEED_PASSWORD`. Seeding only adds missing data, so restarts are safe.
 
 ---
 
-## Unsolved Problems
+## Configuration
 
-- **Rate limiting is in memory.** The counters reset when the application restarts and are not shared between multiple instances. The client address comes from `getRemoteAddr()`, which would show the proxy's address if the application runs behind a reverse proxy.
-- **Spring Security errors use the default format.** A request with a missing or invalid token is rejected by the security filter before it reaches the controllers, so the response is not the JSON error body used everywhere else.
-- **The password reset link cannot be used directly.** The recovery email contains a link to `/users/reset-password?token=...`, but resetting the password is a `POST` request that takes the token and the new password in the request body. The token has to be sent from Postman or Swagger.
-- **Oversized uploads return a 500 error.** Files over 5 MB are rejected, but the generic handler turns the error into a 500 response instead of a 413.
-- **Some endpoints return plain text.** The verification, password and resend-email endpoints return a plain string on success, while errors are JSON.
-- **Notifications are not stored.** A user who is offline when a booking event happens does not receive it later.
+Each service reads an optional `.env` file from its working directory (`spring.config.import=optional:file:.env`). Environment variables override it.
 
----
+| Variable | Used by | Description |
+|---|---|---|
+| `DB_USERNAME`, `DB_PASSWORD` | all services | PostgreSQL credentials |
+| `JWT_SECRET` | all services | Base64-encoded signing key (at least 32 bytes once decoded); must be identical in every service |
+| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | user | The administrator account created on first start |
+| `SEED_PASSWORD` | user | Password of the seeded demo customer and agency |
+| `SMTP_USERNAME`, `SMTP_PASSWORD` | user | Mail server credentials |
+| `FRONTEND_URL` | user, payment | Base URL for email links and Stripe redirects |
+| `INTERNAL_API_KEY` | booking, payment | Shared key for internal service-to-service endpoints |
+| `STRIPE_TEST_SECRET_KEY` | payment | Stripe secret key (`sk_test_…`) |
+| `STRIPE_WEB_HOOK_SECRET` | payment | Stripe webhook signing secret (`whsec_…`) |
 
-## Major Challenges
+Docker Compose supplies the connection URLs (`SPRING_DATASOURCE_URL`, `SPRING_KAFKA_BOOTSTRAP_SERVERS`, `CARSERVICE_URL`, and so on). In AWS, every value comes from SSM Parameter Store under `/rentride/app/*`.
 
-**1. Spring Security errors showed nothing useful.** A request with a missing or invalid token is rejected by a security filter before it reaches any controller, so my global exception handler never saw it and the client got Spring's default response instead of my JSON error body. I learned that errors thrown in filters are handled separately from controller errors, and I listed it as a known limitation.
+Generate a JWT secret with:
 
-**2. Rate limiting.** This was harder than I expected. The limiter is a filter, so it has the same problem as above: its errors bypass the global handler. I also had to decide where to keep the counters. I kept them in memory, which is simple but resets on restart and does not work across several instances.
-
-**3. Consistent error responses.** Different failures need different status codes, and they are easy to mix up. I fixed one rule for each code (400 invalid input, 401 wrong credentials, 403 not allowed, 404 not found, 409 conflict with existing data) and used one global handler to return the same JSON body every time.
-
-**4. Safe file uploads.** The file name and content type sent by the client cannot be trusted. The service checks the first bytes of the file to confirm it is a JPG or PNG, stores it under a random UUID name, and checks that the final path stays inside the upload folder.
-
----
-
-## Future Improvements
-
-- Rate limiting with Redis
-- Docker
-- JSON responses everywhere
-- Reviews and ratings
+```bash
+openssl rand -base64 48
+```
 
 ---
 
-## External Resources
+## API Documentation
 
-**Server-Sent Events (real-time notifications)**
-- [Server-Sent Events video tutorial](https://www.youtube.com/watch?v=WM_J4tajQHM&t=148s)
+Every service publishes interactive OpenAPI documentation:
 
-**Countries and cities data**
-- [countries-states-cities-database](https://github.com/dr5hn/countries-states-cities-database) by dr5hn, licensed under the [ODbL](https://opendatacommons.org/licenses/odbl/) (filtered to the GCC countries)
-- [countries.json](https://github.com/dr5hn/countries-states-cities-database/blob/master/json/countries.json) from the same repository
+| Service | Swagger UI |
+|---|---|
+| user-service | http://localhost:8081/swagger-ui/index.html |
+| car-service | http://localhost:8082/swagger-ui/index.html |
+| booking-service | http://localhost:8083/swagger-ui/index.html |
+| payment-service | http://localhost:8084/swagger-ui/index.html |
+| notification-service | http://localhost:8085/swagger-ui/index.html |
+| audit-service | http://localhost:8086/swagger-ui/index.html |
 
-**Car photos (seed data)**
+To call protected endpoints:
+1. Call `POST /users/login`.
+2. Click **Authorize** and paste the returned token.
 
-The photos of the six seeded cars (`src/main/resources/seed-images`) come from Wikimedia Commons, resized to 1280 px wide. Used for the sample cars in the demo.
+Errors use one consistent body across all services:
 
-- `SEED-001-1.jpg` (Toyota Corolla): ["Toyota Corolla sedan E210 hydrid"](https://commons.wikimedia.org/wiki/File:Toyota_Corolla_sedan_E210_hydrid.jpg) by Mateusmatsuda, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)
-- `SEED-001-2.jpg` (Toyota Corolla): ["TOYOTA COROLLA SEDAN (E210) China"](https://commons.wikimedia.org/wiki/File:TOYOTA_COROLLA_SEDAN_(E210)_China.jpg) by Dinkun Chen, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
-- `SEED-002-1.jpg` (Hyundai Tucson): ["Hyundai Tucson (NX4) 1X7A0424"](https://commons.wikimedia.org/wiki/File:Hyundai_Tucson_(NX4)_1X7A0424.jpg) by Alexander Migl, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
-- `SEED-002-2.jpg` (Hyundai Tucson): ["Hyundai Tucson (NX4, SWB) IMG 9135"](https://commons.wikimedia.org/wiki/File:Hyundai_Tucson_(NX4,_SWB)_IMG_9135.jpg) by Alexander-93, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
-- `SEED-003-1.jpg` (Nissan Altima): ["NISSAN ALTIMA (L34) China (3)"](https://commons.wikimedia.org/wiki/File:NISSAN_ALTIMA_(L34)_China_(3).jpg) by Dinkun Chen, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
-- `SEED-003-2.jpg` (Nissan Altima): ["NISSAN ALTIMA (L34) China (5)"](https://commons.wikimedia.org/wiki/File:NISSAN_ALTIMA_(L34)_China_(5).jpg) by Dinkun Chen, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
-- `SEED-004-1.jpg` (Tesla Model 3): ["Tesla Model 3 (2023) IMG 9488 (cropped)"](https://commons.wikimedia.org/wiki/File:Tesla_Model_3_(2023)_IMG_9488_(cropped).jpg) by Alexander-93, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
-- `SEED-004-2.jpg` (Tesla Model 3): ["Tesla Model 3, EMS 2024, Essen (P1032260)"](https://commons.wikimedia.org/wiki/File:Tesla_Model_3,_EMS_2024,_Essen_(P1032260).jpg) by Matti Blume, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
-- `SEED-005-1.jpg` (Kia Carnival): ["KIA CARNIVAL (KA4) China (5)"](https://commons.wikimedia.org/wiki/File:KIA_CARNIVAL_(KA4)_China_(5).jpg) by Dinkun Chen, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
-- `SEED-005-2.jpg` (Kia Carnival): ["Kia Carnival KA4 PE 1.6T EX HEV Snowflake White Pearl"](https://commons.wikimedia.org/wiki/File:Kia_Carnival_KA4_PE_1.6T_EX_HEV_Snowflake_White_Pearl.jpg) by Ethan Llamas, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
-- `SEED-006-1.jpg` (BMW Z4): ["BMW G29 Z4 M40i (Facelift) 1X7A6946"](https://commons.wikimedia.org/wiki/File:BMW_G29_Z4_M40i_(Facelift)_1X7A6946.jpg) by Alexander-93, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
-- `SEED-006-2.jpg` (BMW Z4): ["BMW Z4 (G29, facelift) M40i DSC 7273"](https://commons.wikimedia.org/wiki/File:BMW_Z4_(G29,_facelift)_M40i_DSC_7273.jpg) by Alexander Migl, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+```json
+{
+  "timestamp": "2026-11-21T10:15:30",
+  "status": 409,
+  "error": "Conflict",
+  "message": "Car is not available at this date",
+  "path": "/bookings/42/approve"
+}
+```
 
-**Stripe**
-- [Stripe Checkout](https://docs.stripe.com/payments/checkout) and [Idempotent requests](https://docs.stripe.com/api/idempotent_requests)
-- [Webhook endpoints API](https://docs.stripe.com/api/webhook_endpoints/list)
-- [How to get the session id in a webhook](https://stackoverflow.com/questions/46368359/how-to-get-session-id-on-webhook) (Stack Overflow)
+---
 
-**Webhooks**
-- [Webhook Basics and Implementing in Java and Spring Boot](https://medium.com/javarevisited/webhook-basics-and-implementing-in-java-and-springboot-1ff1e689d349) (Javarevisited)
-- [Understanding Webhooks: How They Work, Why They Matter, and How to Implement Them](https://medium.com/@franksagie1/understanding-webhooks-how-they-work-why-they-matter-and-how-to-implement-them-fd9d75c4e877) by Frank Sagie
+## Testing
 
-**Car search (JPA Specifications)**
-- [Spring Data JPA: creating a Specification subquery from different tables](https://stackoverflow.com/questions/44172358/spring-data-jpa-creating-specification-subquery-from-different-tables) (Stack Overflow)
+```bash
+# Build the shared module first, then test any service
+./mvnw -f common install -DskipTests
+./mvnw -f booking-service verify
+```
 
-**Locking**
-- [Pessimistic vs Optimistic Locking](https://bytebytego.com/guides/pessimistic-vs-optimistic-locking/) (ByteByteGo)
+| Type | Location | What it covers |
+|---|---|---|
+| Unit tests | `*/src/test/java/**/service` | Business rules with mocked collaborators (JUnit 5 + Mockito) |
+| Concurrency test | `BookingConcurrencyTest` | Parallel approvals of overlapping bookings; exactly one succeeds |
+| BDD acceptance tests | `booking-service/src/test/resources/features/booking.feature` | Ten Cucumber scenarios covering the booking lifecycle, validation, authorisation and conflicts |
 
-**Token bucket (rate limiting)**
-- [Rate Limit per Endpoint in Spring Boot APIs](https://medium.com/@AlexanderObregon/rate-limit-per-endpoint-in-spring-boot-apis-6f4f40da76a2) by Alexander Obregon
-- [Understanding the Token Bucket Algorithm for Rate Limiting](https://medium.com/@0xTanzim/understanding-the-token-bucket-algorithm-for-rate-limiting-fccdf80e27ca)
+The pipeline runs every suite on each push and publishes the JUnit reports in Jenkins.
+
+---
+
+## CI/CD Pipeline
+
+The `Jenkinsfile` defines a declarative pipeline that checks the repository every two minutes and runs on every new commit to `main`:
+
+```
+Checkout ─▶ Build common ─▶ Test services (parallel) ─▶ Publish JUnit reports ─▶ Build images ─▶ Deploy to AWS
+```
+
+The **Deploy to AWS** stage runs `scripts/release.sh`, which:
+
+1. Builds the six service images for `linux/amd64` and tags them with the build's commit.
+2. Pushes them to **Amazon ECR**, where tags are immutable and every image is scanned for vulnerabilities.
+3. Sends the production compose file and `deploy/deploy.sh` to the EC2 instance through **SSM Run Command**. The script loads secrets from Parameter Store, pulls the new images and restarts the stack.
+4. Builds the React app, syncs it to **S3** and invalidates the **CloudFront** cache.
+
+Jenkins authenticates with an IAM role, so no long-lived AWS keys are stored in the pipeline. A manual `DEPLOY` parameter allows on-demand releases.
+
+---
+
+## Cloud Infrastructure
+
+The whole AWS environment is defined in Terraform under [`infra/`](infra/) and can be created or destroyed with a single command.
+
+| File | Resources |
+|---|---|
+| `vpc.tf`, `security.tf` | VPC, public and private subnets, routing, security groups |
+| `rds.tf` | PostgreSQL 17 in a private subnet, encrypted storage, generated password |
+| `ec2.tf`, `user_data.sh` | Amazon Linux 2023 host with Docker, Compose, swap and log shipping (IMDSv2 enforced) |
+| `iam.tf` | Instance role: SSM access, ECR read access, scoped Parameter Store and CloudWatch Logs access |
+| `ecr.tf` | One repository per service, with scan on push, immutable tags and lifecycle cleanup |
+| `ssm.tf` | Application secrets stored as SecureString parameters |
+| `frontend.tf`, `cloudfront.tf` | Static frontend hosting. CloudFront serves the SPA over HTTPS and routes `/api/*` to the services |
+| `monitoring.tf` | CloudWatch log group, error metric filter, alarms and optional email alerts through SNS |
+
+```bash
+cd infra
+cp terraform.tfvars.example terraform.tfvars   # fill in the secrets
+terraform init
+terraform apply
+```
+
+The step-by-step guide is in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+---
+
+## Monitoring and Logging
+
+- **Centralised logs.** All container logs are shipped to the CloudWatch log group `/rentride/app`.
+- **Error alerting.** A metric filter counts `ERROR` lines, and an alarm fires when errors appear.
+- **Infrastructure alarms** watch high EC2 CPU and failed instance status checks.
+- **Notifications.** Alarms can email the on-call address through SNS (`alert_email`).
+- **Audit trail.** Business-level actions are queryable through the audit-service and the admin UI.
+
+---
+
+## Known Limitations and Roadmap
+
+| Area | Current state | Planned improvement |
+|---|---|---|
+| Booking approval lock | In-memory lock, correct for a single instance per service | Database-level lock for horizontal scaling |
+| Rate limiting | In-memory counters per instance | Shared store such as Redis |
+| Kafka error handling | Retries are left to the client defaults | Retry topics with a dead-letter topic |
+| Hosting | Single EC2 host running Docker Compose | Container orchestration (ECS or EKS) with auto scaling and a load balancer |
+| Gateway | CloudFront routes paths to services | Dedicated API gateway with central authentication and throttling |
+| Observability | Logs and alarms | Distributed tracing and metrics dashboards |
+
+---
+
+## Further Documentation
+
+- [Deployment guide](docs/DEPLOYMENT.md): AWS setup, release process, Jenkins, troubleshooting
+- [Concurrency analysis](docs/race-condition.md): race conditions and how each one is prevented
+- [Project planning](docs/planning.md): scope, phases and timeline
+- [Frontend](frontend/README.md): structure and development of the React app
+- [User stories (Jira)](https://yahya-altaraifi.atlassian.net/jira/core/projects/RR/board?filter=&groupBy=none)
+
+---
+
+## Acknowledgements
+
+- Country and city data: [countries-states-cities-database](https://github.com/dr5hn/countries-states-cities-database) by dr5hn, licensed under the [ODbL](https://opendatacommons.org/licenses/odbl/), filtered to the GCC countries.
+- Sample car photos from [Wikimedia Commons](https://commons.wikimedia.org), resized to 1280 px wide:
+  - Toyota Corolla: [photo 1](https://commons.wikimedia.org/wiki/File:Toyota_Corolla_sedan_E210_hydrid.jpg) by Mateusmatsuda (CC BY 4.0), [photo 2](https://commons.wikimedia.org/wiki/File:TOYOTA_COROLLA_SEDAN_(E210)_China.jpg) by Dinkun Chen (CC BY-SA 4.0)
+  - Hyundai Tucson: [photo 1](https://commons.wikimedia.org/wiki/File:Hyundai_Tucson_(NX4)_1X7A0424.jpg) by Alexander Migl, [photo 2](https://commons.wikimedia.org/wiki/File:Hyundai_Tucson_(NX4,_SWB)_IMG_9135.jpg) by Alexander-93 (CC BY-SA 4.0)
+  - Nissan Altima: [photo 1](https://commons.wikimedia.org/wiki/File:NISSAN_ALTIMA_(L34)_China_(3).jpg), [photo 2](https://commons.wikimedia.org/wiki/File:NISSAN_ALTIMA_(L34)_China_(5).jpg) by Dinkun Chen (CC BY-SA 4.0)
+  - Tesla Model 3: [photo 1](https://commons.wikimedia.org/wiki/File:Tesla_Model_3_(2023)_IMG_9488_(cropped).jpg) by Alexander-93, [photo 2](https://commons.wikimedia.org/wiki/File:Tesla_Model_3,_EMS_2024,_Essen_(P1032260).jpg) by Matti Blume (CC BY-SA 4.0)
+  - Kia Carnival: [photo 1](https://commons.wikimedia.org/wiki/File:KIA_CARNIVAL_(KA4)_China_(5).jpg) by Dinkun Chen, [photo 2](https://commons.wikimedia.org/wiki/File:Kia_Carnival_KA4_PE_1.6T_EX_HEV_Snowflake_White_Pearl.jpg) by Ethan Llamas (CC BY-SA 4.0)
+  - BMW Z4: [photo 1](https://commons.wikimedia.org/wiki/File:BMW_G29_Z4_M40i_(Facelift)_1X7A6946.jpg) by Alexander-93, [photo 2](https://commons.wikimedia.org/wiki/File:BMW_Z4_(G29,_facelift)_M40i_DSC_7273.jpg) by Alexander Migl (CC BY-SA 4.0)
+- [Stripe documentation](https://docs.stripe.com) for Checkout, webhooks and idempotent requests.

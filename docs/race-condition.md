@@ -72,7 +72,7 @@ private final ConcurrentHashMap<Long, ReentrantLock> locks = new ConcurrentHashM
 In `approveBooking`, the thread first finds out which car the booking belongs to, then takes that car's lock before checking availability:
 
 ```java
-ReentrantLock lock = locks.computeIfAbsent(booking.getCar().getId(), id -> new ReentrantLock());
+ReentrantLock lock = locks.computeIfAbsent(booking.getCarId(), id -> new ReentrantLock());
 lock.lock();
 try {
     // status check
