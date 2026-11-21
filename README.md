@@ -26,9 +26,11 @@ Agencies list their cars, customers search, book and pay for them online, and ad
 14. [CI/CD Pipeline](#cicd-pipeline)
 15. [Cloud Infrastructure](#cloud-infrastructure)
 16. [Monitoring and Logging](#monitoring-and-logging)
-17. [Known Limitations and Roadmap](#known-limitations-and-roadmap)
-18. [Further Documentation](#further-documentation)
-19. [Acknowledgements](#acknowledgements)
+17. [Challenges](#challenges)
+18. [Unsolved Problems](#unsolved-problems)
+19. [Future Improvements](#future-improvements)
+20. [Further Documentation](#further-documentation)
+21. [Credits and External Resources](#credits-and-external-resources)
 
 ---
 
@@ -141,12 +143,12 @@ PENDING ──approve──▶ APPROVED ──pay──▶ APPROVED + paid ─�
 
 ## Event-Driven Communication
 
-All events are JSON records defined once in `common/events` and shared by every service. Each event carries an `eventId` and an `occurredAt` timestamp. The audit consumers store the `eventId` and skip any event they have already recorded, so redelivered messages never create duplicate entries.
+All events are JSON records defined once in `common/events` and shared by every service. Audit and booking events carry an `eventId` and an `occurredAt` timestamp. The audit consumers store the `eventId` and skip any event they have already recorded, so redelivered messages never create duplicate entries.
 
 | Topic | Produced by | Consumed by | Purpose |
 |---|---|---|---|
 | `audit-events` | every service | audit-service | Records who did what, and when |
-| `notification-events` | payment-service and other services | notification-service | Direct messages to a specific user |
+| `notification-events` | payment-service | notification-service | Direct messages to a specific user |
 | `booking-events` | booking-service | car-service, notification-service, audit-service | Booking state changes. These feed car-service's reservation read model, live notifications and the audit trail |
 
 Kafka runs in **KRaft mode** with two listeners: an internal one for containers and an external one for tools on the host.
@@ -411,7 +413,23 @@ The step-by-step guide is in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ---
 
-## Known Limitations and Roadmap
+## Challenges
+
+- **AWS account not activated in time.** The AWS account was not activated when the infrastructure work started. The Terraform code was written and checked without an account (`terraform validate`, `terraform plan` against the provider schema), so it could be applied unchanged once an account was available.
+- **Slow pushes to ECR.** Pushing the six Java images from a home connection timed out repeatedly, because the base layers are about 130 MB each and the upload speed was below 0.5 MB/s. The images are now built and pushed from inside AWS by the Jenkins server, where the network is fast. Only the small frontend build leaves the developer's machine.
+- **Stripe worked locally but not on AWS.** Locally, `stripe listen` forwards webhook events to `localhost`, so payments were marked as paid. On AWS nothing forwarded them, so bookings stayed unpaid. The fix was to register a webhook endpoint in the Stripe Dashboard pointing to the public URL (`/api/pay/webhook`) and store its signing secret in SSM Parameter Store. This is now solved.
+
+---
+
+## Unsolved Problems
+
+- **Late returns are not handled.** A scheduled job marks a booking `COMPLETED` once its end date passes, whether or not the car was actually returned. There is no way to record a late return, and no late fee is charged.
+- **Deactivated accounts keep working until their token expires.** Services validate the JWT locally and do not check the account's status on each request. When an administrator deactivates a user, that user's existing token is still accepted until it expires.
+- **No caching.** Data that rarely changes (makes, categories, countries, cities) is read from the database on every request, and car search results are not cached either.
+
+---
+
+## Future Improvements
 
 | Area | Current state | Planned improvement |
 |---|---|---|
@@ -434,7 +452,21 @@ The step-by-step guide is in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ---
 
-## Acknowledgements
+## Credits and External Resources
+
+### Microservices, Kafka and Terraform
+
+| Resource | URL | Used for |
+|---|---|---|
+| Microservices (James Lewis and Martin Fowler) | https://martinfowler.com/articles/microservices.html | Understanding microservice characteristics and splitting the monolith |
+| Decompose by business capability (microservices.io) | https://microservices.io/patterns/decomposition/decompose-by-business-capability.html | Choosing the service boundaries (users, cars, bookings, payments, notifications, audit) |
+| Database per service (microservices.io) | https://microservices.io/patterns/data/database-per-service.html | Data ownership: each service owns its tables and refers to others by id only |
+| CQRS (microservices.io) | https://microservices.io/patterns/data/cqrs.html | The car reservations read model in car-service, fed by booking events |
+| REST Clients (Spring Framework reference) | https://docs.spring.io/spring-framework/reference/integration/rest-clients.html | Synchronous service-to-service calls with `RestClient` |
+| Spring for Apache Kafka (reference) | https://docs.spring.io/spring-kafka/reference/ | Producers, `@KafkaListener` consumers and JSON serialisation of events |
+| Terraform AWS Provider (HashiCorp Registry) | https://registry.terraform.io/providers/hashicorp/aws/latest/docs | Writing the AWS infrastructure (VPC, EC2, RDS, ECR, S3, CloudFront, SSM, CloudWatch) |
+
+### Earlier projects
 
 - Country and city data: [countries-states-cities-database](https://github.com/dr5hn/countries-states-cities-database) by dr5hn, licensed under the [ODbL](https://opendatacommons.org/licenses/odbl/), filtered to the GCC countries.
 - Sample car photos from [Wikimedia Commons](https://commons.wikimedia.org), resized to 1280 px wide:
