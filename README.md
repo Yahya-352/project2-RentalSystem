@@ -6,6 +6,19 @@ Agencies list their cars, customers search, book and pay for them online, and ad
 
 **Live demo:** https://d3lwgdw2frxsbt.cloudfront.net
 
+### Documentation
+
+| Document | Contents |
+|---|---|
+| [REST API reference](docs/API.md) | Every endpoint by service: method, request, response, authentication and status codes |
+| [Kafka events](docs/KAFKA.md) | Topics, producers, consumers, event fields and example payloads |
+| [Deployment guide](docs/DEPLOYMENT.md) | AWS setup, release process, Jenkins, troubleshooting |
+| [Concurrency analysis](docs/race-condition.md) | Race conditions and how each one is prevented |
+| [Project planning](docs/planning.md) | Scope, phases, timeline and progress |
+| [Frontend](frontend/README.md) | Setup and structure of the React app |
+| [ERD](docs/ERD_Updated.png) | Entity relationship diagram |
+| [User stories (Jira)](https://yahya-altaraifi.atlassian.net/jira/core/projects/RR/board?filter=&groupBy=none) | User stories by role |
+
 ---
 
 ## Table of Contents
@@ -142,6 +155,8 @@ PENDING ──approve──▶ APPROVED ──pay──▶ APPROVED + paid ─�
 ---
 
 ## Event-Driven Communication
+
+Event fields, every event type and example payloads are in **[docs/KAFKA.md](docs/KAFKA.md)**.
 
 All events are JSON records defined once in `common/events` and shared by every service. Audit and booking events carry an `eventId` and an `occurredAt` timestamp. The audit consumers store the `eventId` and skip any event they have already recorded, so redelivered messages never create duplicate entries.
 
@@ -311,7 +326,9 @@ openssl rand -base64 48
 
 ## API Documentation
 
-Every service publishes interactive OpenAPI documentation:
+The full endpoint reference (method, request, response, authentication and status codes for every service) is in **[docs/API.md](docs/API.md)**. Kafka events are documented separately in **[docs/KAFKA.md](docs/KAFKA.md)**.
+
+Every service also publishes interactive OpenAPI documentation:
 
 | Service | Swagger UI |
 |---|---|
@@ -444,6 +461,8 @@ The step-by-step guide is in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Further Documentation
 
+- [REST API reference](docs/API.md): every endpoint with method, request, response, authentication and status codes
+- [Kafka events](docs/KAFKA.md): topics, producers, consumers, event fields and example payloads
 - [Deployment guide](docs/DEPLOYMENT.md): AWS setup, release process, Jenkins, troubleshooting
 - [Concurrency analysis](docs/race-condition.md): race conditions and how each one is prevented
 - [Project planning](docs/planning.md): scope, phases and timeline
